@@ -66,6 +66,7 @@ private:
     void serialize(Archive & archive, const unsigned int version)
     {
         archive & boost::serialization::base_object<AbstractImmersedBoundaryForce<DIM> >(*this);
+        archive & mElemAttributeLocation;
         archive & mBasicInteractionStrength;
         archive & mBasicInteractionDist;
     }
@@ -73,9 +74,24 @@ private:
 protected:
 
     /**
+     * The permitted types of element in these simulations
+     */
+    enum ThreeRegionElemType
+    {
+        THREE_REGION_LEFT,
+        THREE_REGION_MID,
+        THREE_REGION_RIGHT
+    };
+
+    /**
      * The immersed boundary mesh.
      */
     ImmersedBoundaryMesh<DIM,DIM>* mpMesh;
+
+    /**
+     * The location in the element attriutes vector of the three-region cell type
+     */
+    unsigned mElemAttributeLocation;
 
     /**
      * The cell-cell spring constant.
@@ -90,6 +106,14 @@ protected:
      * Initialised to 0.25 times the cell interaction distance during setup.
      */
     double mBasicInteractionDist;
+
+    /**
+     * Get the type of requested element by interrogating its attribute vector
+     *
+     * @param elemIdx the index of the element
+     * @return the element type
+     */
+    unsigned GetElemType(unsigned elemIdx);
 
 public:
 

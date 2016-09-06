@@ -42,6 +42,7 @@ template<unsigned DIM>
 ThreeRegionInteractionForces<DIM>::ThreeRegionInteractionForces()
         : AbstractImmersedBoundaryForce<DIM>(),
           mpMesh(NULL),
+          mElemAttributeLocation(UNSIGNED_UNSET),
           mBasicInteractionStrength(1e3),
           mBasicInteractionDist(DOUBLE_UNSET)
 {
@@ -57,10 +58,12 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
         ImmersedBoundaryCellPopulation<DIM>& rCellPopulation)
 {
     /*
-     * This force class calculates the force between pairs of nodes in different immersed boundaries.  Each node must
-     * therefore store a dimensionless parameter representing the quantity of different transmembrane proteins at that
-     * location.  We attach these quantities as node attributes, and keep track of where in the node attributes vector
-     * each protein concentration is stored.
+     * This force class divides a palisade of cells into three regions: left, middle, and right.
+     * In addition, one cell on the wrap-around behaves like those in the middle.
+     *
+     * The left and right cell properties are mirrored, and the middle cells are 'neutral'.
+     *
+     * It is assumed that there are (at least initially) 3n+1 cells.
      */
 
     // This will be triggered only once - during simulation set up
@@ -68,20 +71,54 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
     {
         mpMesh = &(rCellPopulation.rGetMesh());
 
-        mBasicInteractionDist = 0.25 * rCellPopulation.GetInteractionDistance();
-
-        // First verify that all nodes have the same number of attributes
-        unsigned num_node_attributes = rCellPopulation.GetNode(0)->GetNumNodeAttributes();
-        for (unsigned node_idx = 0; node_idx < rCellPopulation.GetNumNodes(); node_idx++ )
+        if ( (mpMesh->GetNumElements() - 1) % 3 != 0 || mpMesh->GetNumElements() < 4 )
         {
-            if (num_node_attributes != rCellPopulation.GetNode(node_idx)->GetNumNodeAttributes())
+            EXCEPTION("This class assumes 3n+1 cells arranged in a palisade.");
+        }
+
+        // First verify that all elements have the same number of attributes
+        unsigned num_elem_attributes = rCellPopulation.GetElement(0)->GetNumElementAttributes();
+        for (unsigned elem_idx = 0; elem_idx < rCellPopulation.GetNumElements(); elem_idx++)
+        {
+            if (num_elem_attributes != rCellPopulation.GetElement(elem_idx)->GetNumElementAttributes())
             {
-                EXCEPTION("All nodes must have the same number of attributes to use this force class.");
+                EXCEPTION("All elements must have the same number of attributes to use this force class.");
             }
         }
+
+        // Define the location in the element attributes vector
+        mElemAttributeLocation = num_elem_attributes;
+
+        unsigned elems_per_region = (mpMesh->GetNumElements() - 1) / 3;
+
+        // Set up cell types for each element
+        unsigned running_elem_idx = 0;
+
+        for (unsigned elem_idx = 0 ; elem_idx < elems_per_region ; elem_idx++)
+        {
+            mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_LEFT);
+            running_elem_idx++;
+        }
+        for (unsigned elem_idx = 0 ; elem_idx < elems_per_region ; elem_idx++)
+        {
+            mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_MID);
+            running_elem_idx++;
+        }
+        for (unsigned elem_idx = 0 ; elem_idx < elems_per_region ; elem_idx++)
+        {
+            mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_RIGHT);
+            running_elem_idx++;
+        }
+        mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_MID);
+
+        mBasicInteractionDist = 0.25 * rCellPopulation.GetInteractionDistance();
+
+        PRINT_VARIABLE(THREE_REGION_MID);
+
+        GetElemType(0);
     }
 
-    MARK;
+    PRINT_2_VARIABLES(mBasicInteractionDist, mBasicInteractionStrength);
 
 //    // Helper variables for loop
 //    double normed_dist;
@@ -155,6 +192,19 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
 //            }
 //        }
 //    }
+}
+
+template<unsigned DIM>
+unsigned ThreeRegionInteractionForces<DIM>::GetElemType(unsigned elemIdx)
+{
+    unsigned elem_type = UINT_MAX;
+
+    if (mElemAttributeLocation != UNSIGNED_UNSET)
+    {
+        elem_type = mpMesh->GetElement(elemIdx)->rGetElementAttributes()[mElemAttributeLocation];
+    }
+
+    return elem_type;
 }
 
 template<unsigned DIM>

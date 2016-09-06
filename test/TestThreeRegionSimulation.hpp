@@ -76,7 +76,7 @@ public:
          * 5: Random y-variation
          * 6: Include membrane
          */
-        ImmersedBoundaryPalisadeMeshGenerator gen(11, 128, 0.1, 2.0, 0.0, true);
+        ImmersedBoundaryPalisadeMeshGenerator gen(13, 128, 0.1, 2.0, 0.0, true);
         ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
         p_mesh->SetNumGridPtsXAndY(256);
@@ -104,14 +104,14 @@ public:
 
         MAKE_PTR(ThreeRegionInteractionForces<2>, p_cell_cell_force);
         p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-//        p_cell_cell_force->SetSpringConstant(1.0 * 1e6);
+        p_cell_cell_force->SetBasicInteractionStrength(1e4);
 
         // Set simulation properties
         double dt = 0.01;
         simulator.SetOutputDirectory("TestThreeRegionSim");
         simulator.SetDt(dt);
         simulator.SetSamplingTimestepMultiple(1);
-        simulator.SetEndTime(100.0 * dt);
+        simulator.SetEndTime(10.0 * dt);
 
         simulator.Solve();
     }
