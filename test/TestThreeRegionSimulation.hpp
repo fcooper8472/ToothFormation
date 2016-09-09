@@ -49,6 +49,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ImmersedBoundarySimulationModifier.hpp"
 #include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
 #include "ImmersedBoundaryMembraneElasticityForce.hpp"
+#include "ImmersedBoundaryCellCellInteractionForce.hpp"
 #include "ThreeRegionInteractionForces.hpp"
 #include "FluidSource.hpp"
 #include "SmartPointers.hpp"
@@ -88,6 +89,7 @@ public:
 
         ImmersedBoundaryCellPopulation<2> cell_population(*p_mesh, cells);
         cell_population.SetIfPopulationHasActiveSources(false);
+        cell_population.SetInteractionDistance(2.0 * cell_population.GetInteractionDistance());
 
         OffLatticeSimulation<2> simulator(cell_population);
         simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2,2> >());
@@ -104,14 +106,19 @@ public:
 
         MAKE_PTR(ThreeRegionInteractionForces<2>, p_cell_cell_force);
         p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-        p_cell_cell_force->SetBasicInteractionStrength(1e4);
+        p_cell_cell_force->SetBasicInteractionStrength(1e5);
+
+        // MAKE_PTR(ImmersedBoundaryCellCellInteractionForce<2>, p_cell_cell_force);
+        // p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
+        // p_cell_cell_force->SetSpringConstant(1e5);
+        // p_cell_cell_force->UseMorsePotential();
 
         // Set simulation properties
         double dt = 0.01;
         simulator.SetOutputDirectory("TestThreeRegionSim");
         simulator.SetDt(dt);
         simulator.SetSamplingTimestepMultiple(1);
-        simulator.SetEndTime(10.0 * dt);
+        simulator.SetEndTime(1000.0 * dt);
 
         simulator.Solve();
     }

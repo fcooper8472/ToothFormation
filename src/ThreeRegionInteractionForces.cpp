@@ -35,6 +35,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ThreeRegionInteractionForces.hpp"
 #include "ImmersedBoundaryElement.hpp"
+#include "ImmersedBoundaryEnumerations.hpp"
 
 #include "Debug.hpp"
 
@@ -53,9 +54,9 @@ ThreeRegionInteractionForces<DIM>::~ThreeRegionInteractionForces()
 {
 }
 
-template<unsigned DIM>
-void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std::vector<std::pair<Node<DIM>*, Node<DIM>*> >& rNodePairs,
-        ImmersedBoundaryCellPopulation<DIM>& rCellPopulation)
+template <unsigned DIM>
+void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std::vector<std::pair<Node<DIM> *, Node<DIM> *> > &rNodePairs,
+                                                                             ImmersedBoundaryCellPopulation<DIM> &rCellPopulation)
 {
     /*
      * This force class divides a palisade of cells into three regions: left, middle, and right.
@@ -71,7 +72,7 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
     {
         mpMesh = &(rCellPopulation.rGetMesh());
 
-        if ( (mpMesh->GetNumElements() - 1) % 3 != 0 || mpMesh->GetNumElements() < 4 )
+        if ((mpMesh->GetNumElements() - 1) % 3 != 0 || mpMesh->GetNumElements() < 4)
         {
             EXCEPTION("This class assumes 3n+1 cells arranged in a palisade.");
         }
@@ -94,17 +95,17 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
         // Set up cell types for each element
         unsigned running_elem_idx = 0;
 
-        for (unsigned elem_idx = 0 ; elem_idx < elems_per_region ; elem_idx++)
+        for (unsigned elem_idx = 0; elem_idx < elems_per_region; elem_idx++)
         {
             mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_LEFT);
             running_elem_idx++;
         }
-        for (unsigned elem_idx = 0 ; elem_idx < elems_per_region ; elem_idx++)
+        for (unsigned elem_idx = 0; elem_idx < elems_per_region; elem_idx++)
         {
             mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_MID);
             running_elem_idx++;
         }
-        for (unsigned elem_idx = 0 ; elem_idx < elems_per_region ; elem_idx++)
+        for (unsigned elem_idx = 0; elem_idx < elems_per_region; elem_idx++)
         {
             mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_RIGHT);
             running_elem_idx++;
@@ -112,86 +113,75 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
         mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_MID);
 
         mBasicInteractionDist = 0.25 * rCellPopulation.GetInteractionDistance();
-
-        PRINT_VARIABLE(THREE_REGION_MID);
-
-        GetElemType(0);
     }
 
-    PRINT_2_VARIABLES(mBasicInteractionDist, mBasicInteractionStrength);
+    // Helper variables for loop
+    double normed_dist;
+    double elem_type_mult;
 
-//    // Helper variables for loop
-//    double normed_dist;
-//    double protein_mult;
-//
-//    // The spring constant will be scaled by an amount determined by the intrinsic spacing
-//    double intrinsic_spacing = rCellPopulation.GetIntrinsicSpacing();
-//    double node_a_elem_spacing;
-//    double node_b_elem_spacing;
-//    double elem_spacing;
-//
-//    // The effective spring constant will be a scaled version of mBasicInteractionStrength
-//    double effective_spring_const;
-//
-//    c_vector<double, DIM> vector_between_nodes;
-//    c_vector<double, DIM> force_a_to_b;
-//    c_vector<double, DIM> force_b_to_a;
-//
-//    Node<DIM>* p_node_a;
-//    Node<DIM>* p_node_b;
-//
-//    // If using Morse potential, this can be pre-calculated
-//    double well_width = 0.25 * rCellPopulation.GetInteractionDistance();
-//
-//    // Loop over all pairs of nodes that might be interacting
-//    for (unsigned pair = 0; pair < rNodePairs.size(); pair++)
-//    {
-//        /*
-//         * Interactions only occur between different elements.  Since each node is only ever in a single cell, we can
-//         * test equality of the first ContainingElement.
-//         */
-//        if ( *(rNodePairs[pair].first->ContainingElementsBegin()) !=
-//             *(rNodePairs[pair].second->ContainingElementsBegin()) )
-//        {
-//            p_node_a = rNodePairs[pair].first;
-//            p_node_b = rNodePairs[pair].second;
-//
-//            std::vector<double>& r_a_attribs = p_node_a->rGetNodeAttributes();
-//            std::vector<double>& r_b_attribs = p_node_b->rGetNodeAttributes();
-//
-//            vector_between_nodes = mpMesh->GetVectorFromAtoB(p_node_a->rGetLocation(), p_node_b->rGetLocation());
-//            normed_dist = norm_2(vector_between_nodes);
-//
-//            if (normed_dist < rCellPopulation.GetInteractionDistance())
-//            {
-//                // Get the element spacing for each of the nodes concerned and calculate the effective spring constant
-//                node_a_elem_spacing = mpMesh->GetAverageNodeSpacingOfElement(*(p_node_a->rGetContainingElementIndices().begin()), false);
-//                node_b_elem_spacing = mpMesh->GetAverageNodeSpacingOfElement(*(p_node_b->rGetContainingElementIndices().begin()), false);
-//                elem_spacing = 0.5 * (node_a_elem_spacing + node_b_elem_spacing);
-//
-//                effective_spring_const = mBasicInteractionStrength * elem_spacing / intrinsic_spacing;
-//
-//                // The protein multiplier is a function of the levels of each protein in the current and comparison nodes
-//                protein_mult = std::min(r_a_attribs[e_cad_idx], r_b_attribs[e_cad_idx]) +
-//                               std::min(r_a_attribs[p_cad_idx], r_b_attribs[p_cad_idx]) +
-//                               std::max(r_a_attribs[integrin_idx], r_b_attribs[integrin_idx]);
-//
-//                /*
-//                 * We must scale each applied force by a factor of elem_spacing / local spacing, so that forces
-//                 * balance when spread to the grid later (where the multiplicative factor is the local spacing)
-//                 */
-//                double morse_exp = exp((mBasicInteractionDist - normed_dist) / well_width);
-//                vector_between_nodes *= 2.0 * well_width * effective_spring_const * protein_mult * morse_exp *
-//                                        (1.0 - morse_exp) / normed_dist;
-//
-//                force_a_to_b = vector_between_nodes * elem_spacing / node_a_elem_spacing;
-//                p_node_a->AddAppliedForceContribution(force_a_to_b);
-//
-//                force_b_to_a = -1.0 * vector_between_nodes * elem_spacing / node_b_elem_spacing;
-//                p_node_b->AddAppliedForceContribution(force_b_to_a);
-//            }
-//        }
-//    }
+    // The spring constant will be scaled by an amount determined by the intrinsic spacing
+    double intrinsic_spacing = rCellPopulation.GetIntrinsicSpacing();
+    double node_a_elem_spacing;
+    double node_b_elem_spacing;
+    double elem_spacing;
+
+    // The effective spring constant will be a scaled version of mBasicInteractionStrength
+    double effective_spring_const;
+
+    c_vector<double, DIM> vector_between_nodes;
+    c_vector<double, DIM> force_a_to_b;
+    c_vector<double, DIM> force_b_to_a;
+
+    Node<DIM> *p_node_a;
+    Node<DIM> *p_node_b;
+
+    // If using Morse potential, this can be pre-calculated
+    double well_width = 0.25 * rCellPopulation.GetInteractionDistance();
+
+    // Loop over all pairs of nodes that might be interacting
+    for (unsigned pair = 0; pair < rNodePairs.size(); pair++)
+    {
+        /*
+        * Interactions only occur between different elements.  Since each node is only ever in a single cell, we can
+        * test equality of the first ContainingElement.
+        */
+        if (*(rNodePairs[pair].first->ContainingElementsBegin()) !=
+            *(rNodePairs[pair].second->ContainingElementsBegin()))
+        {
+            p_node_a = rNodePairs[pair].first;
+            p_node_b = rNodePairs[pair].second;
+
+            vector_between_nodes = mpMesh->GetVectorFromAtoB(p_node_a->rGetLocation(), p_node_b->rGetLocation());
+            normed_dist = norm_2(vector_between_nodes);
+
+            if (normed_dist < rCellPopulation.GetInteractionDistance())
+            {
+                // Get the element spacing for each of the nodes concerned and calculate the effective spring constant
+                node_a_elem_spacing = mpMesh->GetAverageNodeSpacingOfElement(*(p_node_a->rGetContainingElementIndices().begin()), false);
+                node_b_elem_spacing = mpMesh->GetAverageNodeSpacingOfElement(*(p_node_b->rGetContainingElementIndices().begin()), false);
+                elem_spacing = 0.5 * (node_a_elem_spacing + node_b_elem_spacing);
+
+                effective_spring_const = mBasicInteractionStrength * elem_spacing / intrinsic_spacing;
+
+                // Here we calculate the adhesion variation due to node regions
+                elem_type_mult = 1.0;//CalculateElementTypeMult(p_node_a, p_node_b);
+
+                /*
+                * We must scale each applied force by a factor of elem_spacing / local spacing, so that forces
+                * balance when spread to the grid later (where the multiplicative factor is the local spacing)
+                */
+                double morse_exp = exp((mBasicInteractionDist - normed_dist) / well_width);
+                vector_between_nodes *= 2.0 * well_width * effective_spring_const * elem_type_mult * morse_exp *
+                                        (1.0 - morse_exp) / normed_dist;
+
+                force_a_to_b = vector_between_nodes * elem_spacing / node_a_elem_spacing;
+                p_node_a->AddAppliedForceContribution(force_a_to_b);
+
+                force_b_to_a = -1.0 * vector_between_nodes * elem_spacing / node_b_elem_spacing;
+                p_node_b->AddAppliedForceContribution(force_b_to_a);
+            }
+        }
+    }
 }
 
 template<unsigned DIM>
@@ -205,6 +195,76 @@ unsigned ThreeRegionInteractionForces<DIM>::GetElemType(unsigned elemIdx)
     }
 
     return elem_type;
+}
+
+template<unsigned DIM>
+unsigned ThreeRegionInteractionForces<DIM>::GetElemType(Node<DIM>* pNode)
+{
+    unsigned elem_type = UINT_MAX;
+
+    if (mElemAttributeLocation != UNSIGNED_UNSET)
+    {
+        std::set<unsigned>& r_containing = pNode->rGetContainingElementIndices();
+
+        if (r_containing.size() == 0)
+        {
+            elem_type = THREE_REGION_LAMINA;
+        }
+        else
+        {
+            unsigned elem_idx = *(r_containing.begin());
+            elem_type = mpMesh->GetElement(elem_idx)->rGetElementAttributes()[mElemAttributeLocation];
+        }
+
+        unsigned elem_idx = *(pNode->rGetContainingElementIndices().begin());
+        elem_type = mpMesh->GetElement(elem_idx)->rGetElementAttributes()[mElemAttributeLocation];
+    }
+
+    return elem_type;
+}
+
+template<unsigned DIM>
+double ThreeRegionInteractionForces<DIM>::CalculateElementTypeMult(Node<DIM>* pNodeA, Node<DIM>* pNodeB)
+{
+    double type_mult = 1.0;
+
+    unsigned elem_type_a = GetElemType(pNodeA);
+    unsigned elem_type_b = GetElemType(pNodeB);
+
+    unsigned region_a = pNodeA->GetRegion();
+    unsigned region_b = pNodeB->GetRegion();
+
+    if (elem_type_a == THREE_REGION_LEFT)
+    {
+        if (region_a == RIGHT_APICAL_REGION || region_a == RIGHT_PERIAPICAL_REGION)
+        {
+            type_mult = 1.5;
+        }
+    }
+    else if (elem_type_a == THREE_REGION_RIGHT)
+    {
+        if (region_a == LEFT_APICAL_REGION || region_a == LEFT_PERIAPICAL_REGION)
+        {
+            type_mult = 1.5;
+        }
+    }
+
+    if (elem_type_b == THREE_REGION_LEFT)
+    {
+        if (region_b == LEFT_APICAL_REGION || region_b == LEFT_PERIAPICAL_REGION)
+        {
+            type_mult = 1.5;
+        }
+    }
+    else if (elem_type_b == THREE_REGION_RIGHT)
+    {
+        if (region_b == RIGHT_APICAL_REGION || region_b == RIGHT_PERIAPICAL_REGION)
+        {
+            type_mult = 1.5;
+        }
+    }
+
+    return type_mult;
 }
 
 template<unsigned DIM>

@@ -80,7 +80,8 @@ protected:
     {
         THREE_REGION_LEFT,
         THREE_REGION_MID,
-        THREE_REGION_RIGHT
+        THREE_REGION_RIGHT,
+        THREE_REGION_LAMINA
     };
 
     /**
@@ -114,6 +115,25 @@ protected:
      * @return the element type
      */
     unsigned GetElemType(unsigned elemIdx);
+
+    /**
+     * Get the element type given a node, by interrogating the attribute vector
+     * of its containing element
+     *
+     * @param pNode the node
+     * @return the element type
+     */
+    unsigned GetElemType(Node<DIM>* pNode);
+
+    /**
+     * Calculate a multiplier based on the element type and node region of the
+     * currently-interacting pair of nodes.
+     *
+     * @param pNodeA the first node in the pair
+     * @param pNodeB the second node in the pair
+     * @return the type multiplier
+     */
+    double CalculateElementTypeMult(Node<DIM>* pNodeA, Node<DIM>* pNodeB);
 
 public:
 
