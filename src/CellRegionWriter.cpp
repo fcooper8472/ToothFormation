@@ -37,14 +37,14 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "AbstractCellPopulation.hpp"
 #include "ImmersedBoundaryCellPopulation.hpp"
 
-template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
+template <unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 CellRegionWriter<ELEMENT_DIM, SPACE_DIM>::CellRegionWriter()
-    : AbstractCellWriter<ELEMENT_DIM, SPACE_DIM>("cell_regions.dat")
+        : AbstractCellWriter<ELEMENT_DIM, SPACE_DIM>("cell_regions.dat")
 {
     this->mVtkCellDataName = "Cell Regions";
 }
 
-template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
+template <unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 double CellRegionWriter<ELEMENT_DIM, SPACE_DIM>::GetCellDataForVtkOutput(CellPtr pCell, AbstractCellPopulation<ELEMENT_DIM, SPACE_DIM>* pCellPopulation)
 {
     // We first need to test that the cell population is vertex-based
@@ -69,7 +69,7 @@ double CellRegionWriter<ELEMENT_DIM, SPACE_DIM>::GetCellDataForVtkOutput(CellPtr
     return cell_region;
 }
 
-template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
+template <unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 void CellRegionWriter<ELEMENT_DIM, SPACE_DIM>::VisitCell(CellPtr pCell, AbstractCellPopulation<ELEMENT_DIM, SPACE_DIM>* pCellPopulation)
 {
     double cell_region = this->GetCellDataForVtkOutput(pCell, pCellPopulation);
@@ -78,19 +78,19 @@ void CellRegionWriter<ELEMENT_DIM, SPACE_DIM>::VisitCell(CellPtr pCell, Abstract
     *this->mpOutStream << " " << cell_region << " " << location_index;
 
     c_vector<double, SPACE_DIM> coords = pCellPopulation->GetLocationOfCellCentre(pCell);
-    for (unsigned i=0; i<SPACE_DIM; i++)
+    for (unsigned i = 0; i < SPACE_DIM; i++)
     {
         *this->mpOutStream << " " << coords[i];
     }
 }
 
 // Explicit instantiation
-template class CellRegionWriter<1,1>;
-template class CellRegionWriter<1,2>;
-template class CellRegionWriter<2,2>;
-template class CellRegionWriter<1,3>;
-template class CellRegionWriter<2,3>;
-template class CellRegionWriter<3,3>;
+template class CellRegionWriter<1, 1>;
+template class CellRegionWriter<1, 2>;
+template class CellRegionWriter<2, 2>;
+template class CellRegionWriter<1, 3>;
+template class CellRegionWriter<2, 3>;
+template class CellRegionWriter<3, 3>;
 
 #include "SerializationExportWrapperForCpp.hpp"
 // Declare identifier for the serializer
