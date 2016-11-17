@@ -37,7 +37,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define TESTTHREEPREGIONSIMULATION_HPP_
 
 // Needed for the test environment
-#include <cxxtest/cxxtest/TestSuite.h>
 #include "AbstractCellBasedTestSuite.hpp"
 
 #include "OffLatticeSimulation.hpp"
@@ -47,18 +46,19 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CellsGenerator.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
-#include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
 #include "ImmersedBoundaryMembraneElasticityForce.hpp"
 #include "ImmersedBoundaryCellCellInteractionForce.hpp"
 #include "ThreeRegionInteractionForces.hpp"
 #include "FluidSource.hpp"
 #include "SmartPointers.hpp"
+#include "CellRegionWriter.hpp"
+
+#include "ThreeRegionMeshGenerator.hpp"
 
 #include "ForwardEulerNumericalMethod.hpp"
 #include <boost/make_shared.hpp>
 
 #include "Debug.hpp"
-
 
 // Simulation does not run in parallel
 #include "FakePetscSetup.hpp"
@@ -77,7 +77,7 @@ public:
          * 5: Random y-variation
          * 6: Include membrane
          */
-        ImmersedBoundaryPalisadeMeshGenerator gen(13, 128, 0.1, 2.0, 0.0, true);
+        ThreeRegionMeshGenerator gen(12, 128, 0.1, 2.0, 0.0, true);
         ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
         p_mesh->SetNumGridPtsXAndY(256);
@@ -90,6 +90,8 @@ public:
         ImmersedBoundaryCellPopulation<2> cell_population(*p_mesh, cells);
         cell_population.SetIfPopulationHasActiveSources(false);
         cell_population.SetInteractionDistance(2.0 * cell_population.GetInteractionDistance());
+
+        cell_population.SetReMeshFrequency(1u);
 
         OffLatticeSimulation<2> simulator(cell_population);
         simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2,2> >());
@@ -104,21 +106,22 @@ public:
         p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
         p_boundary_force->SetSpringConstant(1.0 * 1e7);
 
-        MAKE_PTR(ThreeRegionInteractionForces<2>, p_cell_cell_force);
-        p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-        p_cell_cell_force->SetBasicInteractionStrength(1e5);
+//        MAKE_PTR(ThreeRegionInteractionForces<2>, p_cell_cell_force);
+//        p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
+//        p_cell_cell_force->SetBasicInteractionStrength(1e5);
+//        cell_population.AddCellWriter<CellRegionWriter>();
 
-//         MAKE_PTR(ImmersedBoundaryCellCellInteractionForce<2>, p_cell_cell_force);
-//         p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-//         p_cell_cell_force->SetSpringConstant(1e5);
-//         p_cell_cell_force->UseMorsePotential();
+         MAKE_PTR(ImmersedBoundaryCellCellInteractionForce<2>, p_cell_cell_force);
+         p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
+         p_cell_cell_force->SetSpringConstant(1e5);
+         p_cell_cell_force->UseMorsePotential();
 
         // Set simulation properties
         double dt = 0.01;
         simulator.SetOutputDirectory("TestThreeRegionSim");
         simulator.SetDt(dt);
         simulator.SetSamplingTimestepMultiple(1);
-        simulator.SetEndTime(10.0 * dt);
+        simulator.SetEndTime(100.0 * dt);
 
         simulator.Solve();
     }
