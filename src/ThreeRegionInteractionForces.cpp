@@ -69,9 +69,9 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
     {
         mpMesh = &(rCellPopulation.rGetMesh());
 
-        if ((mpMesh->GetNumElements() - 1) % 3 != 0 || mpMesh->GetNumElements() < 4)
+        if ((mpMesh->GetNumElements()) % 3 != 0 || mpMesh->GetNumElements() < 3)
         {
-            EXCEPTION("This class assumes 3n+1 cells arranged in a palisade.");
+            EXCEPTION("This class assumes 3n cells arranged in a palisade.");
         }
 
         // First verify that all elements have the same number of attributes
@@ -87,7 +87,7 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
         // Define the location in the element attributes vector
         mElemAttributeLocation = num_elem_attributes;
 
-        unsigned elems_per_region = (mpMesh->GetNumElements() - 1) / 3;
+        unsigned elems_per_region = (mpMesh->GetNumElements()) / 3;
 
         // Set up cell types for each element
         unsigned running_elem_idx = 0;
@@ -107,7 +107,6 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
             mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_RIGHT);
             running_elem_idx++;
         }
-        mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_MID);
 
         mBasicInteractionDist = 0.25 * rCellPopulation.GetInteractionDistance();
     }
