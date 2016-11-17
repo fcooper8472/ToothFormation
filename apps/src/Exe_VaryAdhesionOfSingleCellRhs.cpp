@@ -42,8 +42,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "ExecutableSupport.hpp"
 #include "OffLatticeSimulation.hpp"
-#include "RandomNumberGenerator.hpp"
-#include "SimulationTime.hpp"
 #include "SmartPointers.hpp"
 #include "UniformlyDistributedCellCycleModel.hpp"
 

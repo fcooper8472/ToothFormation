@@ -34,10 +34,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "ThreeRegionInteractionForces.hpp"
-#include "ImmersedBoundaryElement.hpp"
 #include "ImmersedBoundaryEnumerations.hpp"
-
-#include "Debug.hpp"
 
 template<unsigned DIM>
 ThreeRegionInteractionForces<DIM>::ThreeRegionInteractionForces()
