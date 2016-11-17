@@ -60,7 +60,7 @@ ThreeRegionMeshGenerator::ThreeRegionMeshGenerator(unsigned numCellsWide,
     unit_vector<double> y_unit(2, 1);
 
     // Calculate cell sizes and rescale if necessary
-    double cell_width = 1.0 / double(numCellsWide);
+    double cell_width = 0.8 / double(numCellsWide);
     double cell_height = cellAspectRatio * cell_width;
 
     if (cell_height > 0.8)
@@ -216,7 +216,7 @@ ThreeRegionMeshGenerator::ThreeRegionMeshGenerator(unsigned numCellsWide,
         for (unsigned location = 0; location < locations.size(); location++)
         {
             unsigned node_index = nodes.size();
-            c_vector<double, 2> scaled_location = 0.95 * locations[location] + x_offset * (elem_idx + 0.5);
+            c_vector<double, 2> scaled_location = 0.95 * locations[location] + x_offset * elem_idx + 0.1 * x_unit;
 
             scaled_location[0] = fmod(scaled_location[0], 1.0);
             scaled_location[1] *= (1.0 + random_variation);
