@@ -43,7 +43,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OffLatticeSimulation.hpp"
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "TransitCellProliferativeType.hpp"
-#include "UniformlyDistributedCellCycleModel.hpp"
+#include "UniformCellCycleModel.hpp"
 #include "CellsGenerator.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
@@ -84,7 +84,7 @@ public:
 
         std::vector<CellPtr> cells;
         MAKE_PTR(DifferentiatedCellProliferativeType, p_diff_type);
-        CellsGenerator<UniformlyDistributedCellCycleModel, 2> cells_generator;
+        CellsGenerator<UniformCellCycleModel, 2> cells_generator;
         cells_generator.GenerateBasicRandom(cells, p_mesh->GetNumElements(), p_diff_type);
 
         ImmersedBoundaryCellPopulation<2> cell_population(*p_mesh, cells);
@@ -108,17 +108,17 @@ public:
         p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
         p_cell_cell_force->SetBasicInteractionStrength(1e5);
 
-        // MAKE_PTR(ImmersedBoundaryCellCellInteractionForce<2>, p_cell_cell_force);
-        // p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-        // p_cell_cell_force->SetSpringConstant(1e5);
-        // p_cell_cell_force->UseMorsePotential();
+//         MAKE_PTR(ImmersedBoundaryCellCellInteractionForce<2>, p_cell_cell_force);
+//         p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
+//         p_cell_cell_force->SetSpringConstant(1e5);
+//         p_cell_cell_force->UseMorsePotential();
 
         // Set simulation properties
         double dt = 0.01;
         simulator.SetOutputDirectory("TestThreeRegionSim");
         simulator.SetDt(dt);
         simulator.SetSamplingTimestepMultiple(1);
-        simulator.SetEndTime(1000.0 * dt);
+        simulator.SetEndTime(10.0 * dt);
 
         simulator.Solve();
     }
