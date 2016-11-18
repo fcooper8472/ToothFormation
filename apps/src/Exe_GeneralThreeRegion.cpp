@@ -35,7 +35,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cxxtest/TestSuite.h>
 
-#include "CellId.hpp" 
+#include "CellId.hpp"
 #include "CellRegionWriter.hpp"
 #include "CellsGenerator.hpp"
 #include "CellsGenerator.hpp"
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
     double tra_spring_const = variables_map["TSC"].as<double>();
     double rhs_adhesion_mod = variables_map["AD"].as<double>();
     double interaction_dist = variables_map["DI"].as<double>();
-    unsigned remesh_freq = variables_map["RM"].as<double>();
+    unsigned remesh_freq = variables_map["RM"].as<unsigned>();
     unsigned num_time_steps = variables_map["TS"].as<unsigned>();
 
     OutputToConsole(id_string, "Started");
@@ -157,7 +157,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
                            double traSpringConst, double rhsAdhesionMod, double interactionDist,
                            unsigned reMeshFreq, unsigned numTimeSteps)
 {
-    /*
+        /*
          * 1: Num cells
          * 2: Num nodes per cell
          * 3: Superellipse exponent
