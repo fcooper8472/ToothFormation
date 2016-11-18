@@ -35,23 +35,24 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cxxtest/TestSuite.h>
 
-// Includes from trunk
-#include "CellId.hpp"
+#include "CellRegionWriter.hpp"
 #include "CellsGenerator.hpp"
-#include "CheckpointArchiveTypes.hpp"
 #include "DifferentiatedCellProliferativeType.hpp"
-#include "ExecutableSupport.hpp"
+#include "FluidSource.hpp"
+#include "ImmersedBoundaryCellCellInteractionForce.hpp"
+#include "ImmersedBoundaryMembraneElasticityForce.hpp"
+#include "ImmersedBoundaryMesh.hpp"
+#include "ImmersedBoundarySimulationModifier.hpp"
 #include "OffLatticeSimulation.hpp"
 #include "SmartPointers.hpp"
+#include "ThreeRegionInteractionForces.hpp"
+#include "TransitCellProliferativeType.hpp"
 #include "UniformCellCycleModel.hpp"
 
-// Includes from Immersed Boundary
-#include "ImmersedBoundaryMesh.hpp"
-#include "ImmersedBoundaryCellPopulation.hpp"
-#include "ImmersedBoundarySimulationModifier.hpp"
-#include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
-#include "ImmersedBoundaryMembraneElasticityForce.hpp"
-#include "ImmersedBoundaryCellCellInteractionForce.hpp"
+#include "ThreeRegionMeshGenerator.hpp"
+
+#include <boost/make_shared.hpp>
+#include "ForwardEulerNumericalMethod.hpp"
 
 // Program option includes for handling command line arguments
 #include <boost/program_options/options_description.hpp>
