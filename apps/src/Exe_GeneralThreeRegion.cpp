@@ -65,7 +65,7 @@ void SetupSingletons();
 void DestroySingletons();
 void SetupAndRunSimulation(std::string idString, double corRestLength, double corSpringConst, double traRestLength,
                            double traSpringConst, double rhsAdhesionMod, double interactionDist,
-                           unsigned numTimeSteps);
+                           unsigned reMeshFreq, unsigned numTimeSteps);
 void OutputToConsole(std::string idString, std::string leading);
 
 int main(int argc, char *argv[])
@@ -107,13 +107,13 @@ int main(int argc, char *argv[])
     double tra_spring_const = variables_map["TSC"].as<double>();
     double rhs_adhesion_mod = variables_map["AD"].as<double>();
     double interaction_dist = variables_map["DI"].as<double>();
-    double interaction_dist = variables_map["DI"].as<double>();
+    unsigned remesh_freq = variables_map["RM"].as<double>();
     unsigned num_time_steps = variables_map["TS"].as<unsigned>();
 
     OutputToConsole(id_string, "Started");
     SetupSingletons();
     SetupAndRunSimulation(id_string, cor_rest_length, cor_spring_const, tra_rest_length, tra_spring_const,
-                          rhs_adhesion_mod, interaction_dist, num_time_steps);
+                          rhs_adhesion_mod, interaction_dist, remesh_freq, num_time_steps);
     DestroySingletons();
     OutputToConsole(id_string, "Completed");
 }
@@ -149,133 +149,64 @@ void OutputToConsole(std::string idString, std::string leading)
 
 void SetupAndRunSimulation(std::string idString, double corRestLength, double corSpringConst, double traRestLength,
                            double traSpringConst, double rhsAdhesionMod, double interactionDist,
-                           unsigned numTimeSteps)
+                           unsigned reMeshFreq, unsigned numTimeSteps)
 {
     /*
-     * 1: Num cells
-     * 2: Num nodes per cell
-     * 3: Superellipse exponent
-     * 4: Superellipse aspect ratio
-     * 5: Random y-variation
-     * 6: Include membrane
-     */
-    ImmersedBoundaryPalisadeMeshGenerator gen(7, 128, 0.1, 2.5, 0.0, true);
+         * 1: Num cells
+         * 2: Num nodes per cell
+         * 3: Superellipse exponent
+         * 4: Superellipse aspect ratio
+         * 5: Random y-variation
+         * 6: Include membrane
+         */
+    ThreeRegionMeshGenerator gen(12, 128, 0.1, 2.0, 0.0, true);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
     p_mesh->SetNumGridPtsXAndY(256);
 
     std::vector<CellPtr> cells;
     MAKE_PTR(DifferentiatedCellProliferativeType, p_diff_type);
-    CellsGenerator<UniformlyDistributedCellCycleModel, 2> cells_generator;
+    CellsGenerator<UniformCellCycleModel, 2> cells_generator;
     cells_generator.GenerateBasicRandom(cells, p_mesh->GetNumElements(), p_diff_type);
 
     ImmersedBoundaryCellPopulation<2> cell_population(*p_mesh, cells);
     cell_population.SetIfPopulationHasActiveSources(false);
     cell_population.SetInteractionDistance(interactionDist);
 
+    cell_population.SetReMeshFrequency(reMeshFreq);
+
     OffLatticeSimulation<2> simulator(cell_population);
+    simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2, 2> >());
+    simulator.GetNumericalMethod()->SetUseUpdateNodeLocation(true);
 
     // Add main immersed boundary simulation modifier
     MAKE_PTR(ImmersedBoundarySimulationModifier<2>, p_main_modifier);
     simulator.AddSimulationModifier(p_main_modifier);
 
-    // Add force law
+    // Add force laws
     MAKE_PTR(ImmersedBoundaryMembraneElasticityForce<2>, p_boundary_force);
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
     p_boundary_force->SetSpringConstant(corSpringConst);
     p_boundary_force->SetRestLengthMultiplier(corRestLength);
 
+    MAKE_PTR(ThreeRegionInteractionForces<2>, p_cell_cell_force);
+    p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
+    p_cell_cell_force->SetBasicInteractionStrength(traSpringConst);
+    p_cell_cell_force->SetAdhesionMultiplier(rhsAdhesionMod);
+    cell_population.AddCellWriter<CellRegionWriter>();
+
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
-    output_directory << "numerics_paper/Exe_GeneralSimulation/sim/" << idString;
+    output_directory << "three_region/sim/" << idString;
     simulator.SetOutputDirectory(output_directory.str());
 
     // Set simulation properties
-    double dt = 0.075;
+    double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(100);
-    simulator.SetEndTime(100.0 * dt);
-    simulator.Solve();
-
-    // Now we have relaxed the mesh, we reset the start time to zero.  This overwrites the output, so we end up with
-    // less clutter
-    SimulationTime::Instance()->Destroy();
-    SimulationTime::Instance()->SetStartTime(0.0);
-
-    // Add a cell-cell interaction force with the same intrinsic strength as the membrane force
-    MAKE_PTR(ImmersedBoundaryCellCellInteractionForce<2>, p_cell_cell_force);
-    p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-    p_cell_cell_force->SetSpringConstant(traSpringConst);
-    p_cell_cell_force->SetRestLength(traRestLength);
-    p_cell_cell_force->UseMorsePotential();
-
-    // Get the centroid of the three relevant cells before anything happens
-    c_vector<double, 2> prev_centroid_start = p_mesh->GetCentroidOfElement(2);
-    c_vector<double, 2> this_centroid_start = p_mesh->GetCentroidOfElement(3);
-    c_vector<double, 2> next_centroid_start = p_mesh->GetCentroidOfElement(4);
-
-    // Get average height of basement lamina
-    ChasteCuboid<2> lamina_bounding_box = p_mesh->CalculateBoundingBoxOfElement(0);
-    double lamina_height = 0.5 * (lamina_bounding_box.rGetLowerCorner()[1] + lamina_bounding_box.rGetUpperCorner()[1]);
-
-    // Kick the second cell in from the left and set its E-cad level
-    unsigned e_cad_location = p_cell_cell_force->rGetProteinNodeAttributeLocations()[0];
-    unsigned p_cad_location = p_cell_cell_force->rGetProteinNodeAttributeLocations()[1];
-
-    for (unsigned node_idx = 0; node_idx < p_mesh->GetElement(3)->GetNumNodes(); node_idx++)
-    {
-        double new_height = lamina_height + 1.05 * (p_mesh->GetElement(3)->GetNode(node_idx)->rGetLocation()[1] - lamina_height);
-        p_mesh->GetElement(3)->GetNode(node_idx)->rGetModifiableLocation()[1] = new_height;
-
-        p_mesh->GetElement(3)->GetNode(node_idx)->rGetNodeAttributes()[e_cad_location] = 1.0;
-        p_mesh->GetElement(3)->GetNode(node_idx)->rGetNodeAttributes()[p_cad_location] = rhsAdhesionMod;
-    }
-
-    // In the top apical domain of the cell directly to the right, add in p_cad
-    double cell_four_height = p_mesh->CalculateBoundingBoxOfElement(4).GetWidth(1);
-    double cell_four_y_cent = p_mesh->GetCentroidOfElement(4)[1];
-    for (unsigned node_idx = 0; node_idx < p_mesh->GetElement(4)->GetNumNodes(); node_idx++)
-    {
-        if (p_mesh->GetElement(4)->GetNode(node_idx)->rGetLocation()[1] - cell_four_y_cent > 0.45 * cell_four_height)
-        {
-            p_mesh->GetElement(4)->GetNode(node_idx)->rGetNodeAttributes()[p_cad_location] = rhsAdhesionMod;
-        }
-    }
-
-    simulator.SetSamplingTimestepMultiple(100);
+    simulator.SetSamplingTimestepMultiple(1);
     simulator.SetEndTime(numTimeSteps * dt);
+
     simulator.Solve();
 
-    OutputFileHandler results_handler(output_directory.str(), false);
-    out_stream results_file = results_handler.OpenOutputFile("results.csv");
 
-    // Get the centroid of the three relevant cells at end of simulation
-    c_vector<double, 2> prev_centroid_end = p_mesh->GetCentroidOfElement(2);
-    c_vector<double, 2> this_centroid_end = p_mesh->GetCentroidOfElement(3);
-    c_vector<double, 2> next_centroid_end = p_mesh->GetCentroidOfElement(4);
-
-    c_vector<double, 2> axis = unit_vector<double>(2,1);
-    double prev_skew = p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(2, axis);
-    double this_skew = p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(3, axis);
-    double next_skew = p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(4, axis);
-
-    // Output summary statistics to results file
-    (*results_file) << "id" << ","
-                    << "delta_prev_cent" << ","
-                    << "delta_this_cent" << ","
-                    << "delta_next_cent" << ","
-                    << "delta_prev_skew" << ","
-                    << "delta_this_skew" << ","
-                    << "delta_next_skew" << std::endl;
-
-    (*results_file) << idString << ","
-                    << boost::lexical_cast<std::string>(prev_centroid_end[1] - prev_centroid_start[1]) << ","
-                    << boost::lexical_cast<std::string>(this_centroid_end[1] - this_centroid_start[1]) << ","
-                    << boost::lexical_cast<std::string>(next_centroid_end[1] - next_centroid_start[1]) << ","
-                    << boost::lexical_cast<std::string>(prev_skew) << ","
-                    << boost::lexical_cast<std::string>(this_skew) << ","
-                    << boost::lexical_cast<std::string>(next_skew);
-
-    // Tidy up
-    results_file->close();
 }
