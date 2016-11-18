@@ -43,7 +43,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ExecutableSupport.hpp"
 #include "OffLatticeSimulation.hpp"
 #include "SmartPointers.hpp"
-#include "UniformlyDistributedCellCycleModel.hpp"
+#include "UniformCellCycleModel.hpp"
 
 // Includes from Immersed Boundary
 #include "ImmersedBoundaryMesh.hpp"
