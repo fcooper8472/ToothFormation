@@ -110,11 +110,6 @@ public:
         p_cell_cell_force->SetBasicInteractionStrength(1e6);
         cell_population.AddCellWriter<CellRegionWriter>();
 
-//        MAKE_PTR(ImmersedBoundaryCellCellInteractionForce<2>, p_cell_cell_force);
-//        p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-//        p_cell_cell_force->SetSpringConstant(1e5);
-//        p_cell_cell_force->UseMorsePotential();
-
         // Set simulation properties
         double dt = 0.01;
         simulator.SetOutputDirectory("TestThreeRegionSim");
