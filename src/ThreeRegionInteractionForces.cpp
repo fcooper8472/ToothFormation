@@ -223,11 +223,8 @@ unsigned ThreeRegionInteractionForces<DIM>::GetElemType(Node<DIM>* pNode)
         else
         {
             unsigned elem_idx = *(r_containing.begin());
-            elem_type = mpMesh->GetElement(elem_idx)->rGetElementAttributes()[mElemAttributeLocation];
+            elem_type = (unsigned)mpMesh->GetElement(elem_idx)->rGetElementAttributes()[mElemAttributeLocation];
         }
-
-        unsigned elem_idx = *(pNode->rGetContainingElementIndices().begin());
-        elem_type = mpMesh->GetElement(elem_idx)->rGetElementAttributes()[mElemAttributeLocation];
     }
 
     return elem_type;
@@ -248,14 +245,14 @@ double ThreeRegionInteractionForces<DIM>::CalculateElementTypeMult(Node<DIM>* pN
     {
         if (region_a == RIGHT_APICAL_REGION || region_a == RIGHT_PERIAPICAL_REGION)
         {
-            type_mult = 1.5;
+            type_mult = 2.5;
         }
     }
     else if (elem_type_a == THREE_REGION_RIGHT)
     {
         if (region_a == LEFT_APICAL_REGION || region_a == LEFT_PERIAPICAL_REGION)
         {
-            type_mult = 1.5;
+            type_mult = 2.5;
         }
     }
 
@@ -263,14 +260,14 @@ double ThreeRegionInteractionForces<DIM>::CalculateElementTypeMult(Node<DIM>* pN
     {
         if (region_b == LEFT_APICAL_REGION || region_b == LEFT_PERIAPICAL_REGION)
         {
-            type_mult = 1.5;
+            type_mult = 2.5;
         }
     }
     else if (elem_type_b == THREE_REGION_RIGHT)
     {
         if (region_b == RIGHT_APICAL_REGION || region_b == RIGHT_PERIAPICAL_REGION)
         {
-            type_mult = 1.5;
+            type_mult = 2.5;
         }
     }
 

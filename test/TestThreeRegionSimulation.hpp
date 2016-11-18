@@ -39,24 +39,24 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Needed for the test environment
 #include "AbstractCellBasedTestSuite.hpp"
 
-#include "OffLatticeSimulation.hpp"
-#include "DifferentiatedCellProliferativeType.hpp"
-#include "TransitCellProliferativeType.hpp"
-#include "UniformCellCycleModel.hpp"
+#include "CellRegionWriter.hpp"
 #include "CellsGenerator.hpp"
+#include "DifferentiatedCellProliferativeType.hpp"
+#include "FluidSource.hpp"
+#include "ImmersedBoundaryCellCellInteractionForce.hpp"
+#include "ImmersedBoundaryMembraneElasticityForce.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
-#include "ImmersedBoundaryMembraneElasticityForce.hpp"
-#include "ImmersedBoundaryCellCellInteractionForce.hpp"
-#include "ThreeRegionInteractionForces.hpp"
-#include "FluidSource.hpp"
+#include "OffLatticeSimulation.hpp"
 #include "SmartPointers.hpp"
-#include "CellRegionWriter.hpp"
+#include "ThreeRegionInteractionForces.hpp"
+#include "TransitCellProliferativeType.hpp"
+#include "UniformCellCycleModel.hpp"
 
 #include "ThreeRegionMeshGenerator.hpp"
 
-#include "ForwardEulerNumericalMethod.hpp"
 #include <boost/make_shared.hpp>
+#include "ForwardEulerNumericalMethod.hpp"
 
 #include "Debug.hpp"
 
@@ -66,7 +66,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class TestThreeRegionSimulation : public AbstractCellBasedTestSuite
 {
 public:
-
     void TestThreeRegionSim() throw(Exception)
     {
         /*
@@ -94,7 +93,7 @@ public:
         cell_population.SetReMeshFrequency(1u);
 
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2,2> >());
+        simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2, 2> >());
         simulator.GetNumericalMethod()->SetUseUpdateNodeLocation(true);
 
         // Add main immersed boundary simulation modifier
@@ -106,26 +105,25 @@ public:
         p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
         p_boundary_force->SetSpringConstant(1.0 * 1e7);
 
-//        MAKE_PTR(ThreeRegionInteractionForces<2>, p_cell_cell_force);
-//        p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-//        p_cell_cell_force->SetBasicInteractionStrength(1e5);
-//        cell_population.AddCellWriter<CellRegionWriter>();
+        MAKE_PTR(ThreeRegionInteractionForces<2>, p_cell_cell_force);
+        p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
+        p_cell_cell_force->SetBasicInteractionStrength(1e6);
+        cell_population.AddCellWriter<CellRegionWriter>();
 
-         MAKE_PTR(ImmersedBoundaryCellCellInteractionForce<2>, p_cell_cell_force);
-         p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-         p_cell_cell_force->SetSpringConstant(1e5);
-         p_cell_cell_force->UseMorsePotential();
+//        MAKE_PTR(ImmersedBoundaryCellCellInteractionForce<2>, p_cell_cell_force);
+//        p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
+//        p_cell_cell_force->SetSpringConstant(1e5);
+//        p_cell_cell_force->UseMorsePotential();
 
         // Set simulation properties
         double dt = 0.01;
         simulator.SetOutputDirectory("TestThreeRegionSim");
         simulator.SetDt(dt);
         simulator.SetSamplingTimestepMultiple(1);
-        simulator.SetEndTime(100.0 * dt);
+        simulator.SetEndTime(1000.0 * dt);
 
         simulator.Solve();
     }
 };
-
 
 #endif /*TESTTHREEPREGIONSIMULATION_HPP_*/
