@@ -36,13 +36,14 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ThreeRegionInteractionForces.hpp"
 #include "ImmersedBoundaryEnumerations.hpp"
 
-template<unsigned DIM>
+template <unsigned DIM>
 ThreeRegionInteractionForces<DIM>::ThreeRegionInteractionForces()
         : AbstractImmersedBoundaryForce<DIM>(),
           mpMesh(NULL),
           mElemAttributeLocation(UNSIGNED_UNSET),
           mBasicInteractionStrength(1e3),
-          mBasicInteractionDist(DOUBLE_UNSET)
+          mBasicInteractionDist(DOUBLE_UNSET),
+          mAdhesionMultiplier(2.0)
 {
 }
 
@@ -245,14 +246,14 @@ double ThreeRegionInteractionForces<DIM>::CalculateElementTypeMult(Node<DIM>* pN
     {
         if (region_a == RIGHT_APICAL_REGION || region_a == RIGHT_PERIAPICAL_REGION)
         {
-            type_mult = 2.5;
+            type_mult = mAdhesionMultiplier;
         }
     }
     else if (elem_type_a == THREE_REGION_RIGHT)
     {
         if (region_a == LEFT_APICAL_REGION || region_a == LEFT_PERIAPICAL_REGION)
         {
-            type_mult = 2.5;
+            type_mult = mAdhesionMultiplier;
         }
     }
 
@@ -260,14 +261,14 @@ double ThreeRegionInteractionForces<DIM>::CalculateElementTypeMult(Node<DIM>* pN
     {
         if (region_b == LEFT_APICAL_REGION || region_b == LEFT_PERIAPICAL_REGION)
         {
-            type_mult = 2.5;
+            type_mult = mAdhesionMultiplier;
         }
     }
     else if (elem_type_b == THREE_REGION_RIGHT)
     {
         if (region_b == RIGHT_APICAL_REGION || region_b == RIGHT_PERIAPICAL_REGION)
         {
-            type_mult = 2.5;
+            type_mult = mAdhesionMultiplier;
         }
     }
 
@@ -296,6 +297,18 @@ template<unsigned DIM>
 double ThreeRegionInteractionForces<DIM>::GetBasicInteractionDist()
 {
     return mBasicInteractionDist;
+}
+
+template<unsigned DIM>
+void ThreeRegionInteractionForces<DIM>::SetAdhesionMultiplier(double adhesionMultiplier)
+{
+    mAdhesionMultiplier = adhesionMultiplier;
+}
+
+template<unsigned DIM>
+double ThreeRegionInteractionForces<DIM>::GetAdhesionMultiplier()
+{
+    return mAdhesionMultiplier;
 }
 
 template<unsigned DIM>

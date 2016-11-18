@@ -109,6 +109,11 @@ protected:
     double mBasicInteractionDist;
 
     /**
+     * The multiplyer by which we increase certain adhesions.
+     */
+    double mAdhesionMultiplier;
+
+    /**
      * Get the type of requested element by interrogating its attribute vector
      *
      * @param elemIdx the index of the element
@@ -177,6 +182,16 @@ public:
      * @return mBasicInteractionDist
      */
     double GetBasicInteractionDist();
+
+    /**
+     * @param adhesionMultiplier the new value of mAdhesionMultiplier
+     */
+    void SetAdhesionMultiplier(double adhesionMultiplier);
+
+    /**
+     * @return mAdhesionMultiplier
+     */
+    double GetAdhesionMultiplier();
 
     /**
      * Overridden OutputImmersedBoundaryForceParameters() method.
