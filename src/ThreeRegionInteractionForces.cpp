@@ -141,8 +141,7 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
         * Interactions only occur between different elements.  Since each node is only ever in a single cell, we can
         * test equality of the first ContainingElement.
         */
-        if (*(rNodePairs[pair].first->ContainingElementsBegin()) !=
-            *(rNodePairs[pair].second->ContainingElementsBegin()))
+        if (mpMesh->NodesInDifferentElementOrLamina(rNodePairs[pair].first, rNodePairs[pair].second))
         {
             p_node_a = rNodePairs[pair].first;
             p_node_b = rNodePairs[pair].second;
@@ -153,14 +152,29 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
             if (normed_dist < rCellPopulation.GetInteractionDistance())
             {
                 // Get the element spacing for each of the nodes concerned and calculate the effective spring constant
-                node_a_elem_spacing = mpMesh->GetAverageNodeSpacingOfElement(*(p_node_a->rGetContainingElementIndices().begin()), false);
-                node_b_elem_spacing = mpMesh->GetAverageNodeSpacingOfElement(*(p_node_b->rGetContainingElementIndices().begin()), false);
+                if (p_node_a->GetRegion() != LAMINA_REGION)
+                {
+                    node_a_elem_spacing = mpMesh->GetAverageNodeSpacingOfElement(*(p_node_a->rGetContainingElementIndices().begin()), false);
+                }
+                else
+                {
+                    node_a_elem_spacing = mpMesh->GetAverageNodeSpacingOfLamina(0, false);
+                }
+                if (p_node_b->GetRegion() != LAMINA_REGION)
+                {
+                    node_b_elem_spacing = mpMesh->GetAverageNodeSpacingOfElement(*(p_node_b->rGetContainingElementIndices().begin()), false);
+                }
+                else
+                {
+                    node_b_elem_spacing = mpMesh->GetAverageNodeSpacingOfLamina(0, false);
+                }
+
                 elem_spacing = 0.5 * (node_a_elem_spacing + node_b_elem_spacing);
 
                 effective_spring_const = mBasicInteractionStrength * elem_spacing / intrinsic_spacing;
 
                 // Here we calculate the adhesion variation due to node regions
-                elem_type_mult = 1.0;//CalculateElementTypeMult(p_node_a, p_node_b);
+                elem_type_mult = CalculateElementTypeMult(p_node_a, p_node_b);
 
                 /*
                 * We must scale each applied force by a factor of elem_spacing / local spacing, so that forces
