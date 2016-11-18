@@ -35,8 +35,13 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cxxtest/TestSuite.h>
 
+#include "CellId.hpp" 
 #include "CellRegionWriter.hpp"
 #include "CellsGenerator.hpp"
+#include "CellsGenerator.hpp"
+#include "CheckpointArchiveTypes.hpp"
+#include "DifferentiatedCellProliferativeType.hpp"
+#include "ExecutableSupport.hpp"
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "FluidSource.hpp"
 #include "ImmersedBoundaryCellCellInteractionForce.hpp"
