@@ -177,7 +177,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
 
     ImmersedBoundaryCellPopulation<2> cell_population(*p_mesh, cells);
     cell_population.SetIfPopulationHasActiveSources(false);
-    cell_population.SetInteractionDistance(interactionDist);
+//    cell_population.SetInteractionDistance(interactionDist);
 
     cell_population.SetReMeshFrequency(reMeshFreq);
 
