@@ -77,7 +77,7 @@ void OutputToConsole(std::string idString, std::string leading);
 int main(int argc, char *argv[])
 {
     // This sets up PETSc and prints out copyright information, etc.
-    ExecutableSupport::StandardStartup(&argc, &argv);
+    ExecutableSupport::StartupWithoutShowingCopyright(&argc, &argv);
 
     // Define command line options
     boost::program_options::options_description general_options("This is a Chaste Immersed Boundary executable.\n");
