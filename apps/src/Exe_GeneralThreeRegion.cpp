@@ -165,10 +165,12 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
          * 5: Random y-variation
          * 6: Include membrane
          */
-    ThreeRegionMeshGenerator gen(12, 128, 0.1, 2.0, 0.0, true);
+    ThreeRegionMeshGenerator gen(15, 64, 0.1, 2.0, 0.0, true);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
-    p_mesh->SetNumGridPtsXAndY(256);
+    p_mesh->SetNumGridPtsXAndY(128);
+
+    std::cout << p_mesh->GetSpacingRatio() << std::endl;
 
     std::vector<CellPtr> cells;
     MAKE_PTR(DifferentiatedCellProliferativeType, p_diff_type);
@@ -177,7 +179,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
 
     ImmersedBoundaryCellPopulation<2> cell_population(*p_mesh, cells);
     cell_population.SetIfPopulationHasActiveSources(false);
-//    cell_population.SetInteractionDistance(interactionDist);
+    cell_population.SetInteractionDistance(interactionDist);
 
     cell_population.SetReMeshFrequency(reMeshFreq);
 
@@ -199,6 +201,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
     p_cell_cell_force->SetBasicInteractionStrength(traSpringConst);
     p_cell_cell_force->SetAdhesionMultiplier(rhsAdhesionMod);
+    p_cell_cell_force->SetBasicInteractionDist(traRestLength);
     cell_population.AddCellWriter<CellRegionWriter>();
 
     // Create and set an output directory that is different for each simulation
@@ -209,7 +212,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(1);
+    simulator.SetSamplingTimestepMultiple(10);
     simulator.SetEndTime(numTimeSteps * dt);
 
     simulator.Solve();
