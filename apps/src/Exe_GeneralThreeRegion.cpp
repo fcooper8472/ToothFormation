@@ -182,6 +182,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     cell_population.SetInteractionDistance(interactionDist);
 
     cell_population.SetReMeshFrequency(reMeshFreq);
+    cell_population.SetOutputNodeRegionToVtk(true);
 
     OffLatticeSimulation<2> simulator(cell_population);
     simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2, 2> >());
@@ -206,16 +207,29 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
-    output_directory << "three_region/sim/" << idString;
+    output_directory << "tooth_formation/Exe_GeneralThreeRegion/sim/" << idString;
     simulator.SetOutputDirectory(output_directory.str());
 
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(1);
+    simulator.SetSamplingTimestepMultiple(10);
     simulator.SetEndTime(numTimeSteps * dt);
 
     simulator.Solve();
+
+    OutputFileHandler results_handler(output_directory.str(), false);
+    out_stream results_file = results_handler.OpenOutputFile("results.csv");
+
+    // Output summary statistics to results file
+    (*results_file) << "id" << ","
+                    << "random_number" << std::endl;
+
+    (*results_file) << idString << ","
+                    << boost::lexical_cast<std::string>(RandomNumberGenerator::Instance()->ranf());
+
+    // Tidy up
+    results_file->close();
 
 
 }
