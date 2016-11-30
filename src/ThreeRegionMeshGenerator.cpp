@@ -84,7 +84,7 @@ ThreeRegionMeshGenerator::ThreeRegionMeshGenerator(unsigned numCellsWide,
      *    __|_____|__ Basal cutoff
      *      \_____/__ y = 0
      */
-    double apical_cutoff = p_gen->GetHeightOfTopSurface();
+    double apical_cutoff = 0.9 * cell_height;
     double basal_cutoff = cell_height - apical_cutoff;
     double periapical_cutoff = apical_cutoff - basal_cutoff;
 
