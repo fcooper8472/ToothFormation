@@ -35,16 +35,16 @@ trl = np.linspace(0.01, 0.02, num=3)
 tsc = np.linspace(1e6, 1e7, num=3)
 ad = np.linspace(2.0, 3.0, num=2)
 di = [0.02]
-rf = [4294967295]
-ts = [20]
+rf = [999999]
+ts = [1000]
 
 
 def main():
-    run_simulations()
-    #make_movies_parallel()
+    # run_simulations()
+    make_movies_parallel()
     combine_output()
     # plot_results()
-    #compress_output()
+    compress_output()
 
 
 # Create a list of commands and pass them to separate processes
@@ -114,8 +114,7 @@ def make_movies_parallel():
         dir_name = os.path.join(path_to_output, 'sim', str(idx))
 
         if os.path.isfile(os.path.join(dir_name, 'results.csv')):
-            command_list.append((dir_name, path_to_movies, str(idx), 'Surface'))
-            command_list.append((dir_name, path_to_movies, str(idx), 'Points'))
+            command_list.append((dir_name, path_to_movies, str(idx), 'Points', 9))
 
     # Use processes equal to the number of cpus available
     count = multiprocessing.cpu_count()
