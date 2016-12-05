@@ -264,6 +264,8 @@ def plot_results():
 # Compress output and suffix with date run
 def compress_output():
 
+    print("Py: Compressing output to tar with suffix " + today + '.tar.gz')
+
     # Check that output directory exists
     if not (os.path.isdir(path_to_output)):
         raise Exception('Py: Could not find output directory: ' + path_to_output)
