@@ -112,29 +112,7 @@ def make_movies_parallel():
 
     for idx, param_set in combined_iterable:
 
-        # Generate the simulation directory
-        sim_dir = os.path.join(path_to_output, 'sim', str(idx))
-        results_file = os.path.join(sim_dir, 'results.csv')
-
-        # We identify whether there is valid data; if not, the paraview script will not exit gracefully
-        valid_data_available = False
-
-        possible_data_directories = []
-        for directory in os.listdir(sim_dir):
-            if directory.startswith('results_from_time'):
-                possible_data_directories.append(os.path.join(sim_dir, directory))
-
-        if len(possible_data_directories) > 0:
-            # The last directory alphabetically will be the relevant one for visualisation
-            data_directory = sorted(possible_data_directories)[-1]
-
-            # Get the path to the pvd file
-            pvd_file = os.path.join(data_directory, 'results.pvd')
-
-            if os.path.isfile(results_file) and os.path.isfile(pvd_file) and os.path.getsize(pvd_file) > 1024:
-                valid_data_available = True
-
-        if valid_data_available:
+        if data_is_valid(idx):
             command_list.append((sim_dir, path_to_movies, str(idx), 'Points', 9))
         else:
             print("Py: No valid data for sim with index " + str(idx))
@@ -155,6 +133,33 @@ def make_movies_parallel():
 def wrap_movie_command(args):
     immersed_boundary.pvd_to_mp4(*args)
 
+# Helper function to verify valid data output from a given simulation
+def data_is_valid(idx):
+
+    # Generate the simulation directory
+    sim_dir = os.path.join(path_to_output, 'sim', str(idx))
+    results_file = os.path.join(sim_dir, 'results.csv')
+
+    # We identify whether there is valid data; if not, the paraview script will not exit gracefully
+    valid_data_available = False
+
+    possible_data_directories = []
+    for directory in os.listdir(sim_dir):
+        if directory.startswith('results_from_time'):
+            possible_data_directories.append(os.path.join(sim_dir, directory))
+
+    if len(possible_data_directories) > 0:
+        # The last directory alphabetically will be the relevant one for visualisation
+        data_directory = sorted(possible_data_directories)[-1]
+
+        # Get the path to the pvd file
+        pvd_file = os.path.join(data_directory, 'results.pvd')
+
+        if os.path.isfile(results_file) and os.path.isfile(pvd_file) and os.path.getsize(pvd_file) > 1024:
+            valid_data_available = True
+
+    return valid_data_available
+
 
 # Gather the output from all simulations and put it in the same file
 def combine_output():
@@ -170,7 +175,7 @@ def combine_output():
     for idx, param_set in combined_iterable:
         file_name = os.path.join(path_to_output, 'sim', str(idx), 'results.csv')
 
-        if os.path.isfile(file_name):
+        if data_is_valid(idx):
             local_results = open(file_name, 'r')
 
             # Add header to combined results if not yet done - else skip the header
