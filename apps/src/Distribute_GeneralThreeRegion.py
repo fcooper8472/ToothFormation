@@ -26,7 +26,7 @@ command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --TRL ', ' --TSC ', ' --A
 params_list = ['simulation_id', 'cor_rest_length', 'cor_spring_const', 'tra_rest_length', 'tra_spring_const',
                'adhesion_modifier', 'interaction_dist', 'remesh_frequency', 'num_time_steps']
 
-today = time.strftime('%Y-%m-%d')
+today = time.strftime('%Y-%m-%dT%H%M')
 
 # Param ranges (in lists, for itertools product
 crl = [0.25]
@@ -37,6 +37,8 @@ ad = np.linspace(1.0, 3.0, num=3)
 di = [0.02]
 rf = [100, 500, 1000]
 ts = [50000]
+
+combined_iterable = enumerate(itertools.product(crl, csc, trl, tsc, ad, di, rf, ts))
 
 
 def main():
@@ -61,7 +63,7 @@ def run_simulations():
 
     base_command = 'nice -n 19 ' + executable
 
-    for idx, param_set in enumerate(itertools.product(crl, csc, trl, tsc, ad, di, rf, ts)):
+    for idx, param_set in combined_iterable:
 
         params_file.write(str(idx) + ',' + ",".join(map(str, param_set)) + '\n')
 
@@ -108,7 +110,7 @@ def make_movies_parallel():
 
     command_list = []
 
-    for idx, param_set in enumerate(itertools.product(crl, csc, trl, tsc, ad, di, ts)):
+    for idx, param_set in combined_iterable:
 
         # Create the command needed to make the movies
         dir_name = os.path.join(path_to_output, 'sim', str(idx))
@@ -144,7 +146,7 @@ def combine_output():
     combined_results = open(os.path.join(path_to_output, 'combined_results.csv'), 'w')
     added_header = False
 
-    for idx, param_set in enumerate(itertools.product(crl, csc, trl, tsc, ad, di, ts)):
+    for idx, param_set in combined_iterable:
         file_name = os.path.join(path_to_output, 'sim', str(idx), 'results.csv')
 
         if os.path.isfile(file_name):
@@ -161,7 +163,10 @@ def combine_output():
             combined_results.write(local_results.readline())
 
             local_results.close()
-            combined_results.write("\n")
+            combined_results.write('\n')
+
+        else:
+            combined_results.write(str(idx) + ',' + 'simulation_incomplete' + '\n')
 
     combined_results.close()
 
