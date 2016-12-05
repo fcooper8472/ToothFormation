@@ -32,10 +32,10 @@ today = time.strftime('%Y-%m-%dT%H%M')
 crl = [0.25]
 csc = [1e6]
 trl = [0.01]
-tsc = np.linspace(1e6, 2e6, num=5)
-ad = np.linspace(1.0, 2.0, num=5)
+tsc = np.linspace(1e6, 3e6, num=4)
+ad = np.linspace(1.0, 4.0, num=6)
 di = [0.02]
-rf = [500]
+rf = [2500]
 ts = [50000]
 
 combined_iterable = enumerate(itertools.product(crl, csc, trl, tsc, ad, di, rf, ts))
@@ -44,7 +44,7 @@ combined_iterable = enumerate(itertools.product(crl, csc, trl, tsc, ad, di, rf, 
 def main():
     run_simulations()
     # make_movies_parallel()
-    # combine_output()
+    combine_output()
     # plot_results()
     compress_output()
 
