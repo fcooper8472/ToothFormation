@@ -218,18 +218,26 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
 
     simulator.Solve();
 
+    // Calculate the total height variation along the lamina
+    double total_y_var = 0.0;
+    for (unsigned node_idx = 1 ; node_idx < p_mesh->GetLamina(0)->GetNumNodes(); node_idx++)
+    {
+        c_vector<double, 2> prev_location = p_mesh->GetLamina(0)->GetNode(node_idx-1)->rGetLocation();
+        c_vector<double, 2> this_location = p_mesh->GetLamina(0)->GetNode(node_idx)->rGetLocation();
+
+        total_y_var += fabs(p_mesh->GetVectorFromAtoB(prev_location, this_location)[1]);
+    }
+
     OutputFileHandler results_handler(output_directory.str(), false);
     out_stream results_file = results_handler.OpenOutputFile("results.csv");
 
     // Output summary statistics to results file
     (*results_file) << "id" << ","
-                    << "random_number" << std::endl;
+                    << "total_y_var" << std::endl;
 
     (*results_file) << idString << ","
-                    << boost::lexical_cast<std::string>(RandomNumberGenerator::Instance()->ranf());
+                    << boost::lexical_cast<std::string>(total_y_var);
 
     // Tidy up
     results_file->close();
-
-
 }
