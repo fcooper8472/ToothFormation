@@ -32,10 +32,10 @@ today = time.strftime('%Y-%m-%dT%H%M')
 crl = [0.25]
 csc = [1e6]
 trl = [0.01]
-tsc = np.linspace(1e6, 3e6, num=3)
-ad = np.linspace(1.0, 3.0, num=3)
-di = [0.02]
-rf = [100, 500, 1000]
+tsc = np.linspace(1e6, 2e6, num=3)
+ad = np.linspace(1.0, 2.0, num=3)
+di = np.linspace(0.01, 0.03, num=3)
+rf = [500]
 ts = [50000]
 
 combined_iterable = enumerate(itertools.product(crl, csc, trl, tsc, ad, di, rf, ts))
