@@ -165,10 +165,10 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
          * 5: Random y-variation
          * 6: Include membrane
          */
-    ThreeRegionMeshGenerator gen(15, 64, 0.1, 2.0, 0.0, true);
+    ThreeRegionMeshGenerator gen(15, 128, 0.1, 2.0, 0.0, true);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
-    p_mesh->SetNumGridPtsXAndY(128);
+    p_mesh->SetNumGridPtsXAndY(256);
 
     std::cout << p_mesh->GetSpacingRatio() << std::endl;
 
@@ -213,7 +213,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(10);
+    simulator.SetSamplingTimestepMultiple(100);
     simulator.SetEndTime(numTimeSteps * dt);
 
     simulator.Solve();
