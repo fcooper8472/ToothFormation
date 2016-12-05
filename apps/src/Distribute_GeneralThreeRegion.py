@@ -113,6 +113,7 @@ def make_movies_parallel():
     for idx, param_set in combined_iterable:
 
         if data_is_valid(idx):
+            sim_dir = os.path.join(path_to_output, 'sim', str(idx))
             command_list.append((sim_dir, path_to_movies, str(idx), 'Points', 9))
         else:
             print("Py: No valid data for sim with index " + str(idx))
