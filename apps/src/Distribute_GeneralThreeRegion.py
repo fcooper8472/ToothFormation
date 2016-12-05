@@ -31,16 +31,16 @@ today = time.strftime('%Y-%m-%d')
 # Param ranges (in lists, for itertools product
 crl = [0.25]
 csc = [1e6]
-trl = np.linspace(0.01, 0.02, num=3)
-tsc = np.linspace(1e6, 1e7, num=3)
-ad = np.linspace(2.0, 3.0, num=2)
+trl = [0.01]
+tsc = np.linspace(1e6, 3e6, num=3)
+ad = np.linspace(1.0, 3.0, num=3)
 di = [0.02]
-rf = [999999]
-ts = [1000]
+rf = [100, 500, 1000]
+ts = [50000]
 
 
 def main():
-    # run_simulations()
+    run_simulations()
     make_movies_parallel()
     combine_output()
     # plot_results()
