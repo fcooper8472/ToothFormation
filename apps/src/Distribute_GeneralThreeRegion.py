@@ -32,8 +32,8 @@ today = time.strftime('%Y-%m-%dT%H%M')
 crl = [0.25]
 csc = [1e6]
 trl = [0.01]
-tsc = np.linspace(1e6, 2e6, num=3)
-ad = np.linspace(1.0, 2.0, num=3)
+tsc = np.linspace(1e6, 2e6, num=5)
+ad = np.linspace(1.0, 2.0, num=5)
 di = [0.02]
 rf = [500]
 ts = [50000]
