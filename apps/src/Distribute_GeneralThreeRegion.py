@@ -43,8 +43,8 @@ combined_iterable = enumerate(itertools.product(crl, csc, trl, tsc, ad, di, rf, 
 
 def main():
     run_simulations()
-    # make_movies_parallel()
     combine_output()
+    # make_movies_parallel()
     # plot_results()
     compress_output()
 
