@@ -213,6 +213,12 @@ ThreeRegionMeshGenerator::ThreeRegionMeshGenerator(unsigned numCellsWide,
         std::vector<Node<2>*> nodes_this_elem;
         double random_variation = p_rand_gen->ranf() * randomYMult;
 
+        //\todo: remove this temporary variation
+        if (elem_idx == 4 || elem_idx == 9)
+        {
+            random_variation = 0.05;
+        }
+
         for (unsigned location = 0; location < locations.size(); location++)
         {
             unsigned node_index = nodes.size();
