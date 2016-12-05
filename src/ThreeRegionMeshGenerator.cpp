@@ -214,9 +214,9 @@ ThreeRegionMeshGenerator::ThreeRegionMeshGenerator(unsigned numCellsWide,
         double random_variation = p_rand_gen->ranf() * randomYMult;
 
         //\todo: remove this temporary variation
-        if (elem_idx == 4 || elem_idx == 9)
+        if (elem_idx == 4 || elem_idx == 10)
         {
-            random_variation = 0.05;
+            random_variation = 0.1;
         }
 
         for (unsigned location = 0; location < locations.size(); location++)
