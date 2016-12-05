@@ -213,7 +213,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(100);
+    simulator.SetSamplingTimestepMultiple(500);
     simulator.SetEndTime(numTimeSteps * dt);
 
     simulator.Solve();
