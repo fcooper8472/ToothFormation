@@ -1,34 +1,46 @@
 import itertools
-import multiprocessing
 import os
+import re
 import subprocess
 import time
 
+import multiprocessing as mp
 import numpy as np
-import matplotlib.pyplot as plt
 
 try:
-    import immersed_boundary
-except ImportError:
-    print("Py: immersed_boundary not imported - is chaste project in the python path?")
+    import svg_to_webm
+except ImportError as e:
+    svg_to_webm = None
+    quit("Exception: " + str(e))
+
+try:
+    import dominate
+    from dominate.tags import *
+except ImportError as e:
+    dominate = None
+    quit("Exception: " + str(e))
 
 # Globally accessible directory paths, names, and variables
 chaste_build_dir = os.environ.get('CHASTE_BUILD_DIR')
+chaste_test_dir = os.environ.get('CHASTE_TEST_OUTPUT')
+
 executable = os.path.join(chaste_build_dir, 'projects/ToothFormation/apps', 'Exe_GeneralThreeRegion')
+path_to_output = os.path.join(chaste_test_dir, 'tooth_formation', 'Exe_GeneralThreeRegion')
+path_to_sims = os.path.join(path_to_output, 'sim')
+path_to_movies = os.path.join(path_to_output, 'movies')
 
 if not(os.path.isfile(executable)):
-    raise Exception('Py: Could not find executable: ' + executable)
+    quit('Py: Could not find executable: ' + executable)
 
-chaste_test_dir = os.environ.get('CHASTE_TEST_OUTPUT')
-path_to_output = os.path.join(chaste_test_dir, 'tooth_formation', 'Exe_GeneralThreeRegion')
-
+# List of command line arguments for the executable, and corresponding list of parameter names
 command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --TRL ', ' --TSC ', ' --AD ', ' --DI ', ' --RM ', ' --TS ']
 params_list = ['simulation_id', 'cor_rest_length', 'cor_spring_const', 'tra_rest_length', 'tra_spring_const',
                'adhesion_modifier', 'interaction_dist', 'remesh_frequency', 'num_time_steps']
 
+# Time string when script is run, used for creating a unique archive name
 today = time.strftime('%Y-%m-%dT%H%M')
 
-# Param ranges (in lists, for itertools product
+# Param ranges (in lists, for itertools product)
 crl = [0.25]
 csc = [1e6]
 trl = [0.01]
@@ -36,21 +48,24 @@ tsc = np.linspace(1e6, 2e6, num=3)
 ad = np.linspace(1.4, 1.6, num=3)
 di = [0.02]
 rf = [2500]
-ts = [100000]
+ts = [100]
 
+# An enumerated iterable containing every combination of the parameter ranges defined above
 combined_iterable = enumerate(itertools.product(crl, csc, trl, tsc, ad, di, rf, ts))
 
 
 def main():
-    run_simulations()
-    # combine_output()
+    # run_simulations()
     # make_movies_parallel()
-    # plot_results()
-    compress_output()
+    # combine_output()
+    generate_html()
+    # compress_output()
 
 
 # Create a list of commands and pass them to separate processes
 def run_simulations():
+
+    print("Py: Starting simulations with " + str(mp.cpu_count()) + " processes")
 
     # Make a list of calls to a Chaste executable
     command_list = []
@@ -77,89 +92,64 @@ def run_simulations():
 
     params_file.close()
 
-    # Use processes equal to the number of cpus available
-    count = multiprocessing.cpu_count()
-
-    print("Py: Starting simulations with " + str(count) + " processes")
-
     # Generate a pool of workers
-    pool = multiprocessing.Pool(processes=count)
+    pool = mp.Pool(processes=mp.cpu_count())
 
-    # Pass the list of bash commands to the pool
-
-    # Wait at most one day
+    # Pass the list of bash commands to the pool and wait at most one day
     pool.map_async(execute_command, command_list).get(86400)
 
 
-# This is a helper function for run_simulation that runs bash commands in separate processes
+# Helper function for run_simulation that runs bash commands in separate processes
 def execute_command(cmd):
     return subprocess.call(cmd, shell=True)
 
 
-# Make an mp4 movie from each pvd file
+# Make a webm from each svg output
 def make_movies_parallel():
 
-    print("Py: Combining chaste output to movies")
+    print("Py: Combining chaste output to movies with " + str(mp.cpu_count()) + " processes")
 
+    # Validate output directories
     if not (os.path.isdir(path_to_output)):
-        raise Exception('Py: Could not find output directory: ' + path_to_output)
+        quit("Py: Could not find output directory: " + path_to_output)
+    if not (os.path.isdir(path_to_sims)):
+        quit("Py: Could not find simulation output directory: " + path_to_sims)
 
-    path_to_movies = os.path.join(path_to_output, 'movies')
-    if not (os.path.isdir(path_to_movies)):
-        os.makedirs(path_to_movies)
+    # Create a set of directories containing any svg results files
+    svg_pattern = re.compile('results_\d+\.svg')
+    data_dirs = set()
+    for root, dirs, files in os.walk(path_to_sims):
+        for f in files:
+            if svg_pattern.match(f) or f == 'svg_arch.tar.gz':
+                data_dirs.add(root)
+
+    for d in data_dirs:
+        print (d)
 
     command_list = []
 
-    for idx, param_set in combined_iterable:
+    idx_pattern = re.compile('sim/(\d+)/results_from_time')
+    for data_dir in data_dirs:
+        index_match = idx_pattern.search(data_dir)
+        if not index_match:
+            quit('Py: Could not determine simulation index from svg directory string: ' + data_dir)
+        idx = int(index_match.group(1))
 
-        if data_is_valid(idx):
-            sim_dir = os.path.join(path_to_output, 'sim', str(idx))
-            command_list.append((sim_dir, path_to_movies, str(idx), 'Points', 9))
-        else:
-            print("Py: No valid data for sim with index " + str(idx))
-
-    # Use processes equal to the number of cpus available
-    count = multiprocessing.cpu_count()
-
-    print("Py: Creating movies from simulation output with " + str(count) + " processes")
+        command_list.append((data_dir, str(idx).zfill(2) + '.webm', 16.0/9, 15.0, False))
 
     # Generate a pool of workers
-    pool = multiprocessing.Pool(processes=count)
+    pool = mp.Pool(processes=mp.cpu_count())
 
     # Wait at most one day
-    pool.map_async(wrap_movie_command, command_list).get(86400)
+    pool.map_async(wrap_webm_command, command_list).get(86400)
 
 
 # Helper function to wrap the movie making command so that it only takes one variable
-def wrap_movie_command(args):
-    immersed_boundary.pvd_to_mp4(*args)
-
-# Helper function to verify valid data output from a given simulation
-def data_is_valid(idx):
-
-    # Generate the simulation directory
-    sim_dir = os.path.join(path_to_output, 'sim', str(idx))
-    results_file = os.path.join(sim_dir, 'results.csv')
-
-    # We identify whether there is valid data; if not, the paraview script will not exit gracefully
-    valid_data_available = False
-
-    possible_data_directories = []
-    for directory in os.listdir(sim_dir):
-        if directory.startswith('results_from_time'):
-            possible_data_directories.append(os.path.join(sim_dir, directory))
-
-    if len(possible_data_directories) > 0:
-        # The last directory alphabetically will be the relevant one for visualisation
-        data_directory = sorted(possible_data_directories)[-1]
-
-        # Get the path to the pvd file
-        pvd_file = os.path.join(data_directory, 'results.pvd')
-
-        if os.path.isfile(results_file) and os.path.isfile(pvd_file) and os.path.getsize(pvd_file) > 1024:
-            valid_data_available = True
-
-    return valid_data_available
+def wrap_webm_command(args):
+    try:
+        svg_to_webm.svg_to_webm(*args)
+    except Exception as svg_to_webm_exception:
+        print("Exception: " + str(svg_to_webm_exception))
 
 
 # Gather the output from all simulations and put it in the same file
@@ -168,98 +158,90 @@ def combine_output():
     print("Py: Combining output")
 
     if not (os.path.isdir(path_to_output)):
-        raise Exception('Py: Could not find output directory: ' + path_to_output)
+        quit('Py: Could not find output directory: ' + path_to_output)
 
-    combined_results = open(os.path.join(path_to_output, 'combined_results.csv'), 'w')
-    added_header = False
+    combined_results = []
+    results_header = []
 
     for idx, param_set in combined_iterable:
-        file_name = os.path.join(path_to_output, 'sim', str(idx), 'results.csv')
+        results_file = os.path.join(path_to_output, 'sim', str(idx), 'results.csv')
 
-        if data_is_valid(idx):
-            local_results = open(file_name, 'r')
+        if os.path.isfile(results_file):
 
-            # Add header to combined results if not yet done - else skip the header
-            if not added_header:
-                combined_results.write(local_results.readline())
-                added_header = True
-            else:
-                _ = local_results.readline()
+            with open(results_file, 'r') as local_results:
+                # If the results_header is empty, append the first line of the local results file
+                if not results_header:
+                    results_header.append(local_results.readline().strip('\n'))
+                else:
+                    local_results.readline()
 
-            # Write the results to the combined results file
-            combined_results.write(local_results.readline())
+                # Store the results (second line of the results file) in the combined_results list
+                combined_results.append(local_results.readline().strip('\n'))
+        else:  # results file does not exist
+            combined_results.append(str(idx) + ',' + 'simulation_incomplete')
 
-            local_results.close()
-            combined_results.write('\n')
-
-        else:
-            combined_results.write(str(idx) + ',' + 'simulation_incomplete' + '\n')
-
-    combined_results.close()
+    with open(os.path.join(path_to_output, 'combined_results.csv'), 'w') as combined_results_file:
+        combined_results_file.write('\n'.join(results_header + combined_results))
 
 
-def plot_results():
+def generate_html():
+    # Find all webm files
 
-    print("Py: Plotting results")
-    #
-    # bg_gray = '0.75'
-    # bg_line_width = 0.5
-    #
-    # # Set LaTeX font rendering
-    # plt.rc('text', usetex=True)
-    # plt.rc('font', family='serif', serif='computer modern roman')
-    # plt.rc('figure', figsize=[10,6.18]) # inches
-    # plt.rc('axes', linewidth=bg_line_width, edgecolor=bg_gray, axisbelow=True)
-    # plt.rc('xtick', labelsize=10)
-    # plt.rc('ytick', labelsize=10)
-    # plt.rc('xtick.major', size=0, pad=4)
-    # plt.rc('ytick.major', size=0, pad=4)
-    #
-    #
-    # my_data = np.genfromtxt(path_to_output + exec_name + '/combined_results.dat', delimiter=',', skip_header=1)
-    #
-    # col_to_plot = 4 # the column to plot from the data file
-    #
-    # x_vals = my_data[:,1] # local const
-    # y_vals = my_data[:,col_to_plot] # summary statistic
-    #
-    # x_min, x_max = min(x_vals), max(x_vals)
-    # y_min, y_max = min(y_vals), max(y_vals)
-    #
-    # x_range, y_range = x_max - x_min, y_max - y_min
-    # margin = 0.05;
-    #
-    # x_lims = [x_min - margin * x_range, x_max + margin * x_range]
-    # y_lims = [y_min - margin * y_range, y_max + margin * y_range]
-    #
-    # num_sims_per_plot = num_local_consts * num_kicks_per_sim
-    #
-    # for plot in range(num_global_consts):
-    #
-    #     plt.clf()
-    #
-    #     plt.xlabel(r'Local spring constant multiple', fontsize=12, labelpad=20)
-    #     plt.ylabel(r'Right asymmetry', fontsize=12, labelpad=20)
-    #
-    #     title = 'Global cell-cell spring constant scaled by ' + str(0.5 + 0.25 * plot)
-    #
-    #     plt.title(title, fontsize=14, y = 1.05)
-    #
-    #     highlight_x_vals = my_data[plot * num_sims_per_plot : (plot+1) * num_sims_per_plot,1]
-    #     highlight_y_vals = my_data[plot * num_sims_per_plot : (plot+1) * num_sims_per_plot,col_to_plot]
-    #
-    #     plt.scatter(x_vals, y_vals, color = '0.5', marker = 'o', facecolors='none', edgecolors='0.5')
-    #     plt.scatter(highlight_x_vals, highlight_y_vals, color = '#F39200')
-    #
-    #     plt.xlim(x_lims)
-    #     plt.ylim(y_lims)
-    #
-    #
-    #     ax = plt.gca()
-    #     ax.grid(b=True, which='major', color=bg_gray, linestyle='dotted', dash_capstyle='round')
-    #
-    #     plt.savefig(path_to_output + exec_name + '/Fig_' + exec_name + str(plot) + '_pdf.pdf', bbox_inches='tight', pad_inches=0.4)
-    #     plt.savefig(path_to_output + exec_name + '/Fig_' + exec_name + str(plot) + '_eps.eps', bbox_inches='tight', pad_inches=0.5)
+    # Validate output directories
+    if not (os.path.isdir(path_to_output)):
+        quit("Py: Could not find output directory: " + path_to_output)
+
+    if not os.path.isdir(path_to_movies):
+        os.mkdir(path_to_movies)
+
+    # Create a set of directories containing any svg results files
+    svg_pattern = re.compile('\d+\.webm')
+    webm_files = []
+    for root, dirs, files in os.walk(path_to_output):
+        for f in files:
+            if svg_pattern.match(f):
+                webm_files.append(os.path.join(root, f))
+
+    webm_files = sorted(webm_files)
+
+    html_doc = dominate.document(title="Immersed Boundary Simulations")
+
+    table_of_webms = table()
+
+    table_header = thead()
+    table_header += td('')
+    table_header += td('phead1')
+    table_header += td('phead2')
+    table_header += td('rhead2')
+
+    table_of_webms += table_header
+
+    table_body = tbody()
+
+    webm_pattern = re.compile('((\d+)\.webm)')
+    for webm_file in webm_files:
+        webm_match = webm_pattern.search(webm_file)
+        if not webm_match:
+            quit('Py: Could not find webm file: ' + webm_file)
+
+        webm_name = webm_match.group(1)
+        webm_idx = int(webm_match.group(2))
+
+        row_of_table = tr()
+        row_of_table += td(a(webm_name, href=webm_file))
+        row_of_table += td('param_1')
+        row_of_table += td('param_2')
+        row_of_table += td('result_1')
+
+        table_body += row_of_table
+
+    table_of_webms += table_body
+
+    html_doc += table_of_webms
+
+    print(html_doc)
+    with open(os.path.join(path_to_output, 'index.html'), 'w') as html_index:
+        html_index.write(html_doc.render())
 
 
 # Compress output and suffix with date run
