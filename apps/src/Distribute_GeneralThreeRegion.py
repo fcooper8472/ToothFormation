@@ -312,6 +312,28 @@ def copy_assets():
         subprocess.call(['cp', sort_table_js_src, sort_table_js_dst, '-u'])
 
 
+def generate_movies_html(list_of_movie_names):
+
+    path_to_html = os.path.join(path_to_output, 'html')
+    if not os.path.isdir(path_to_html):
+        os.mkdir(path_to_html)
+
+    for movie_name in list_of_movie_names:
+
+        html_doc = dominate.document(title=movie_name)
+
+        # Add html head containing css
+        with html_doc.head:
+            link(rel='stylesheet', href='../css/default.css')
+
+        with html_doc:
+            with div(_class='video'):
+                video(controls='', src='../movies/'+movie_name, type='video/webm', _class='full')
+
+        with open(os.path.join(path_to_html, movie_name.replace('.webm', '.html')), 'w') as webm_html:
+            webm_html.write(html_doc.render())
+
+
 # Compress output and suffix with date run
 def compress_output():
 
