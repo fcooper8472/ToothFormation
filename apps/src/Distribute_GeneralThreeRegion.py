@@ -207,9 +207,7 @@ def generate_html():
                 subprocess.call(['cp', os.path.join(root, f), os.path.join(path_to_movies, f), '-u'])
                 webm_numbers.append(int(webm_match.group(1)))
 
-    print(webm_numbers)
-
-    webm_files = sorted(os.listdir(path_to_movies))
+    generate_movies_html(os.listdir(path_to_movies))
 
     # Read params and results into lists of lists
     with open(os.path.join(path_to_output, 'params_file.csv'), 'r') as params_file:
@@ -227,6 +225,14 @@ def generate_html():
         params_and_results.append(combined_parameters[row_num].strip().split(',') +
                                   combined_results[row_num].strip().split(',')[1:])
 
+    # Determine which data columns are unchanging
+    unchanging_cols = []
+    for col_idx in range(len(params_and_results[0])):
+        column = [row[col_idx] for row in params_and_results]
+        first_value = column[0]
+        if all(x == first_value for x in column):
+            unchanging_cols.append(col_idx)
+
     # Create html document
     html_doc = dominate.document(title="Immersed Boundary Simulations")
 
@@ -242,8 +248,11 @@ def generate_html():
         with div(id='main').add(table(id='webm_table', _class='tablesorter')):
             with thead():
                 td('Webm Name')
-                for cell in header_row:
-                    td(cell)
+                for idx, cell in enumerate(header_row):
+                    if idx in unchanging_cols:
+                        td(cell, _class='cell_header cell_unchanging')
+                    else:
+                        td(cell, _class='cell_header')
             with tbody():
                 for row in params_and_results:
                     idx = int(row[0])
@@ -253,8 +262,13 @@ def generate_html():
                             td(a(webm, href=os.path.join('movies', webm), target='_blank'))
                         else:
                             td('no webm')
-                        for cell in row:
-                            td(cell)
+                        for idx, cell in enumerate(row):
+                            if idx in unchanging_cols:
+                                td(cell, _class='cell_right cell_unchanging')
+                            elif idx == 0:
+                                td(cell, _class='cell_centre')  # id column centred
+                            else:
+                                td(cell, _class='cell_right')   # other columns right-aligned
 
     with open(os.path.join(path_to_output, 'index.html'), 'w') as html_index:
         html_index.write(html_doc.render())
