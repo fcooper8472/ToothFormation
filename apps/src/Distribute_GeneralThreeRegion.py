@@ -185,7 +185,8 @@ def combine_output():
 
 
 def generate_html():
-    # Find all webm files
+
+    print("Py: Generating html")
 
     # Validate output directories
     if not (os.path.isdir(path_to_output)):
@@ -194,54 +195,107 @@ def generate_html():
     if not os.path.isdir(path_to_movies):
         os.mkdir(path_to_movies)
 
-    # Create a set of directories containing any svg results files
-    svg_pattern = re.compile('\d+\.webm')
-    webm_files = []
-    for root, dirs, files in os.walk(path_to_output):
+    copy_assets()
+
+    # Copy all webm files into the movies directory
+    webm_numbers = []
+    webm_pattern = re.compile('(\d+)\.webm')
+    for root, dirs, files in os.walk(path_to_sims):
         for f in files:
-            if svg_pattern.match(f):
-                webm_files.append(os.path.join(root, f))
+            webm_match = webm_pattern.match(f)
+            if webm_match:
+                subprocess.call(['cp', os.path.join(root, f), os.path.join(path_to_movies, f), '-u'])
+                webm_numbers.append(int(webm_match.group(1)))
 
-    webm_files = sorted(webm_files)
+    print(webm_numbers)
 
+    webm_files = sorted(os.listdir(path_to_movies))
+
+    # Read params and results into lists of lists
+    with open(os.path.join(path_to_output, 'params_file.csv'), 'r') as params_file:
+        combined_parameters = params_file.readlines()
+
+    with open(os.path.join(path_to_output, 'combined_results.csv'), 'r') as combined_results_file:
+        combined_results = combined_results_file.readlines()
+
+    # Concatenate and format the headers
+    header_row = combined_parameters[0].strip().split(',') + combined_results[0].strip().split(',')[1:]
+    header_row = [header_row[x].replace('_', ' ').title() for x in range(len(header_row))]
+
+    params_and_results = []
+    for row_num in range(1, len(combined_parameters)):
+        params_and_results.append(combined_parameters[row_num].strip().split(',') +
+                                  combined_results[row_num].strip().split(',')[1:])
+
+    # Create html document
     html_doc = dominate.document(title="Immersed Boundary Simulations")
 
-    table_of_webms = table()
+    # Add html head containing css and js
+    with html_doc.head:
+        link(rel='stylesheet', href='css/theme.green.min.css')
+        link(rel='stylesheet', href='css/default.css')
+        script(src='js/jquery.min.js')
+        script(src='js/jquery.tablesorter.min.js')
+        script(src='js/sort_table.js')
 
-    table_header = thead()
-    table_header += td('')
-    table_header += td('phead1')
-    table_header += td('phead2')
-    table_header += td('rhead2')
+    with html_doc:
+        with div(id='main').add(table(id='webm_table', _class='tablesorter')):
+            with thead():
+                td('Webm Name')
+                for cell in header_row:
+                    td(cell)
+            with tbody():
+                for row in params_and_results:
+                    idx = int(row[0])
+                    with tr():
+                        if idx in webm_numbers:
+                            webm = str(idx).zfill(2) + '.webm'
+                            td(a(webm, href=os.path.join('movies', webm), target='_blank'))
+                        else:
+                            td('no webm')
+                        for cell in row:
+                            td(cell)
 
-    table_of_webms += table_header
-
-    table_body = tbody()
-
-    webm_pattern = re.compile('((\d+)\.webm)')
-    for webm_file in webm_files:
-        webm_match = webm_pattern.search(webm_file)
-        if not webm_match:
-            quit('Py: Could not find webm file: ' + webm_file)
-
-        webm_name = webm_match.group(1)
-        webm_idx = int(webm_match.group(2))
-
-        row_of_table = tr()
-        row_of_table += td(a(webm_name, href=webm_file))
-        row_of_table += td('param_1')
-        row_of_table += td('param_2')
-        row_of_table += td('result_1')
-
-        table_body += row_of_table
-
-    table_of_webms += table_body
-
-    html_doc += table_of_webms
-
-    print(html_doc)
     with open(os.path.join(path_to_output, 'index.html'), 'w') as html_index:
         html_index.write(html_doc.render())
+
+
+def copy_assets():
+
+    scripts_dir = os.environ.get('SCRIPTS_DIR')
+    if not scripts_dir:
+        print("Py: Warning: Could not find scripts directory: css and js elements may not work")
+    else:
+        # create directories to copy in to
+        if not os.path.isdir(os.path.join(path_to_output, 'css')):
+            os.mkdir(os.path.join(path_to_output, 'css'))
+        if not os.path.isdir(os.path.join(path_to_output, 'js')):
+            os.mkdir(os.path.join(path_to_output, 'js'))
+
+        # default css
+        default_css_src = os.path.join(scripts_dir, 'css', 'default.css')
+        default_css_dst = os.path.join(path_to_output, 'css', 'default.css')
+        subprocess.call(['cp', default_css_src, default_css_dst, '-u'])
+
+        # tablesorter theme css
+        green_css_src = os.path.join(scripts_dir, 'css', 'theme.green.min.css')
+        green_css_dst = os.path.join(path_to_output, 'css', 'theme.green.min.css')
+        subprocess.call(['cp', green_css_src, green_css_dst, '-u'])
+
+        # jQuery js
+        jquery_js_src = os.path.join(scripts_dir, 'js', 'jquery.min.js')
+        jquery_js_dst = os.path.join(path_to_output, 'js', 'jquery.min.js')
+        subprocess.call(['cp', jquery_js_src, jquery_js_dst, '-u'])
+
+        # tablesorter js
+        tablesorter_js_src = os.path.join(scripts_dir, 'js', 'jquery.tablesorter.min.js')
+        tablesorter_js_dst = os.path.join(path_to_output, 'js', 'jquery.tablesorter.min.js')
+        subprocess.call(['cp', tablesorter_js_src, tablesorter_js_dst, '-u'])
+
+        # sort_table js
+        sort_table_js_src = os.path.join(scripts_dir, 'js', 'sort_table.js')
+        sort_table_js_dst = os.path.join(path_to_output, 'js', 'sort_table.js')
+        subprocess.call(['cp', sort_table_js_src, sort_table_js_dst, '-u'])
 
 
 # Compress output and suffix with date run
