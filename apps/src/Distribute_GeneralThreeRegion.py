@@ -245,7 +245,7 @@ def generate_html():
         script(src='js/sort_table.js')
 
     with html_doc:
-        with div(id='main').add(table(id='webm_table', _class='tablesorter')):
+        with div(_class='main').add(table(id='webm_table', _class='tablesorter')):
             with thead():
                 td('Webm Name')
                 for idx, cell in enumerate(header_row):
