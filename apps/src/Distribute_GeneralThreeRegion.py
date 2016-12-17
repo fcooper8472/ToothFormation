@@ -258,8 +258,8 @@ def generate_html():
                     idx = int(row[0])
                     with tr():
                         if idx in webm_numbers:
-                            webm = str(idx).zfill(2) + '.webm'
-                            td(a(webm, href=os.path.join('movies', webm), target='_blank'))
+                            webm = str(idx).zfill(2)
+                            td(a(webm + '.webm', href=os.path.join('html', webm + '.html'), target='_blank'))
                         else:
                             td('no webm')
                         for idx, cell in enumerate(row):
