@@ -48,18 +48,18 @@ tsc = np.linspace(1e6, 2e6, num=3)
 ad = np.linspace(1.4, 1.6, num=3)
 di = [0.02]
 rf = [2500]
-ts = [100]
+ts = [1000]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
 combined_iterable = enumerate(itertools.product(crl, csc, trl, tsc, ad, di, rf, ts))
 
 
 def main():
-    # run_simulations()
-    # make_movies_parallel()
-    # combine_output()
+    run_simulations()
+    combine_output()
+    make_movies_parallel()
     generate_html()
-    # compress_output()
+    compress_output()
 
 
 # Create a list of commands and pass them to separate processes
