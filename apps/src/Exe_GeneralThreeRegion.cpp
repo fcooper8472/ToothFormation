@@ -212,10 +212,13 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     output_directory << "tooth_formation/Exe_GeneralThreeRegion/sim/" << idString;
     simulator.SetOutputDirectory(output_directory.str());
 
+    // Calculate sampling multiple to have at least 5 frames per second on a 15 second video
+    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(numTimeSteps / (15.0 * 5.0))));
+
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(10);
+    simulator.SetSamplingTimestepMultiple(sampling_multiple);
     simulator.SetEndTime(numTimeSteps * dt);
 
     simulator.Solve();
