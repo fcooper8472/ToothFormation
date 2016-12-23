@@ -183,6 +183,8 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
 
     cell_population.SetReMeshFrequency(reMeshFreq);
     cell_population.SetOutputNodeRegionToVtk(true);
+    cell_population.SetOutputToSvg(true);
+    cell_population.SetOutputToVtk(false);
 
     OffLatticeSimulation<2> simulator(cell_population);
     simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2, 2> >());
@@ -213,7 +215,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(2000);
+    simulator.SetSamplingTimestepMultiple(10);
     simulator.SetEndTime(numTimeSteps * dt);
 
     simulator.Solve();
