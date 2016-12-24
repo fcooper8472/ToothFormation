@@ -51,7 +51,7 @@ rf = [2500]
 ts = [1000]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
-combined_iterable = enumerate(itertools.product(crl, csc, trl, tsc, ad, di, rf, ts))
+combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, rf, ts))
 
 
 def main():
@@ -78,7 +78,7 @@ def run_simulations():
 
     base_command = 'nice -n 19 ' + executable
 
-    for idx, param_set in combined_iterable:
+    for idx, param_set in enumerate(combined_iterable):
 
         params_file.write(str(idx) + ',' + ",".join(map(str, param_set)) + '\n')
 
@@ -163,11 +163,10 @@ def combine_output():
     combined_results = []
     results_header = []
 
-    for idx, param_set in combined_iterable:
+    for idx, param_set in enumerate(combined_iterable):
         results_file = os.path.join(path_to_output, 'sim', str(idx), 'results.csv')
 
         if os.path.isfile(results_file):
-
             with open(results_file, 'r') as local_results:
                 # If the results_header is empty, append the first line of the local results file
                 if not results_header:
