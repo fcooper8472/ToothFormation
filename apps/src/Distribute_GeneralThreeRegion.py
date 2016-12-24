@@ -123,9 +123,6 @@ def make_movies_parallel():
             if svg_pattern.match(f) or f == 'svg_arch.tar.gz':
                 data_dirs.add(root)
 
-    for d in data_dirs:
-        print (d)
-
     command_list = []
 
     idx_pattern = re.compile('sim/(\d+)/results_from_time')
