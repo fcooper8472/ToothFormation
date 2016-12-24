@@ -179,6 +179,9 @@ def combine_output():
     with open(os.path.join(path_to_output, 'combined_results.csv'), 'w') as combined_results_file:
         combined_results_file.write('\n'.join(results_header + combined_results))
 
+    if os.path.getsize(os.path.join(path_to_output, 'combined_results.csv')) < 4:
+        quit("Py: Combined results not generated as expected")
+
 
 def generate_html():
 
