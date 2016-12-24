@@ -82,13 +82,13 @@ def run_simulations():
 
         params_file.write(str(idx) + ',' + ",".join(map(str, param_set)) + '\n')
 
-        command = base_command
-        command += ' --ID ' + str(idx)
+        this_command = base_command
+        this_command += ' --ID ' + str(idx)
 
         for arg in range(len(param_set)):
-            command += command_line_args[arg+1] + str(param_set[arg])
+            this_command += command_line_args[arg+1] + str(param_set[arg])
 
-        command_list.append(command)
+        command_list.append(this_command)
 
     params_file.close()
 
