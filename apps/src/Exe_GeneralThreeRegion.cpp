@@ -45,7 +45,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "FluidSource.hpp"
 #include "ImmersedBoundaryCellCellInteractionForce.hpp"
-#include "ImmersedBoundaryMembraneElasticityForce.hpp"
+#include "ImmersedBoundaryLinearMembraneForce.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
 #include "OffLatticeSimulation.hpp"
@@ -195,10 +195,10 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     simulator.AddSimulationModifier(p_main_modifier);
 
     // Add force laws
-    MAKE_PTR(ImmersedBoundaryMembraneElasticityForce<2>, p_boundary_force);
+    MAKE_PTR(ImmersedBoundaryLinearMembraneForce<2>, p_boundary_force);
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
-    p_boundary_force->SetSpringConstant(corSpringConst);
-    p_boundary_force->SetRestLengthMultiplier(corRestLength);
+    p_boundary_force->SetElementSpringConst(corSpringConst);
+    p_boundary_force->SetElementRestLength(corRestLength);
 
     MAKE_PTR(ThreeRegionInteractionForces<2>, p_cell_cell_force);
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);

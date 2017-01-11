@@ -43,14 +43,14 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ExecutableSupport.hpp"
 #include "OffLatticeSimulation.hpp"
 #include "SmartPointers.hpp"
-#include "UniformlyDistributedCellCycleModel.hpp"
+#include "UniformCellCycleModel.hpp"
 
 // Includes from Immersed Boundary
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundaryCellPopulation.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
 #include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
-#include "ImmersedBoundaryMembraneElasticityForce.hpp"
+#include "ImmersedBoundaryLinearMembraneForce.hpp"
 #include "ImmersedBoundaryCellCellInteractionForce.hpp"
 
 // Program option includes for handling command line arguments
@@ -162,7 +162,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
 
     std::vector<CellPtr> cells;
     MAKE_PTR(DifferentiatedCellProliferativeType, p_diff_type);
-    CellsGenerator<UniformlyDistributedCellCycleModel, 2> cells_generator;
+    CellsGenerator<UniformCellCycleModel, 2> cells_generator;
     cells_generator.GenerateBasicRandom(cells, p_mesh->GetNumElements(), p_diff_type);
 
     ImmersedBoundaryCellPopulation<2> cell_population(*p_mesh, cells);
@@ -176,10 +176,10 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     simulator.AddSimulationModifier(p_main_modifier);
 
     // Add force law
-    MAKE_PTR(ImmersedBoundaryMembraneElasticityForce<2>, p_boundary_force);
+    MAKE_PTR(ImmersedBoundaryLinearMembraneForce<2>, p_boundary_force);
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
-    p_boundary_force->SetSpringConstant(corSpringConst);
-    p_boundary_force->SetRestLengthMultiplier(corRestLength);
+    p_boundary_force->SetElementSpringConst(corSpringConst);
+    p_boundary_force->SetElementRestLength(corRestLength);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
