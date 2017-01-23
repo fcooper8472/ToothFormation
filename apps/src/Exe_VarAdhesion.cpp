@@ -44,8 +44,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ExecutableSupport.hpp"
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "FluidSource.hpp"
-#include "ImmersedBoundaryCellCellInteractionForce.hpp"
-#include "ImmersedBoundaryLinearMembraneForce.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
 #include "OffLatticeSimulation.hpp"
@@ -55,6 +53,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "NoCellCycleModel.hpp"
 
 #include "ThreeRegionMeshGenerator.hpp"
+#include "VarAdhesionMorseMembraneForce.hpp"
 
 #include <boost/make_shared.hpp>
 #include "ForwardEulerNumericalMethod.hpp"
@@ -194,10 +193,12 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     simulator.AddSimulationModifier(p_main_modifier);
 
     // Add force laws
-    MAKE_PTR(ImmersedBoundaryLinearMembraneForce<2>, p_boundary_force);
+    MAKE_PTR(VarAdhesionMorseMembraneForce<2>, p_boundary_force);
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
-    p_boundary_force->SetElementSpringConst(corSpringConst);
+    p_boundary_force->SetElementWellDepth(corSpringConst);
     p_boundary_force->SetElementRestLength(corRestLength);
+    p_boundary_force->SetLaminaWellDepth(corSpringConst);
+    p_boundary_force->SetLaminaRestLength(corRestLength);
 
     MAKE_PTR(ThreeRegionInteractionForces<2>, p_cell_cell_force);
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
