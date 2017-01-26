@@ -86,6 +86,18 @@ private:
     /** The well width as a fraction of the average node spacing in either an element or lamina */
     double mWellWidth;
 
+    /** The multiplicative factor to change the well depth by for particular nodes */
+    double mStiffnessMult;
+
+    /**
+     * Helper method for CalculateForcesOnElement().
+     * Determine whether to modify stiffness, based on the elem region and node region.
+     * @param elem_region the elem region (left, centre, right, membrane)
+     * @param node_region the node region (RIGHT_APICAL, RIGHT_BASAL, etc)
+     * @return the stiffness multiplier altering interaction properties
+     */
+    double CalculateStiffnessMult(unsigned elem_region, unsigned node_region);
+
     /**
      * Helper method for AddImmersedBoundaryForceContribution.
      * Calculates forces, and can accept either an element or a lamina
@@ -151,6 +163,12 @@ public:
 
     /** @param wellWidth the new value of mWellWidth */
     void SetWellWidth(double wellWidth);
+
+    /** @return mStiffnessMult */
+    double GetStiffnessMult() const;
+
+    /** @param stiffnessMult the new value of mStiffnessMult */
+    void SetStiffnessMult(double stiffnessMult);
 };
 
 #include "SerializationExportWrapper.hpp"

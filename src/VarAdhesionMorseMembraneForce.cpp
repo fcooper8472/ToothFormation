@@ -34,6 +34,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "VarAdhesionMorseMembraneForce.hpp"
+#include "ImmersedBoundaryEnumerations.hpp"
 
 template <unsigned DIM>
 VarAdhesionMorseMembraneForce<DIM>::VarAdhesionMorseMembraneForce()
@@ -42,7 +43,8 @@ VarAdhesionMorseMembraneForce<DIM>::VarAdhesionMorseMembraneForce()
           mElementRestLength(0.5),
           mLaminaWellDepth(1e6),
           mLaminaRestLength(0.5),
-          mWellWidth(0.25)
+          mWellWidth(0.25),
+          mStiffnessMult(1.0)
 {
 }
 
@@ -84,6 +86,22 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
     // Get index and number of nodes of current element
     unsigned elem_idx = rElement.GetIndex();
     unsigned num_nodes = rElement.GetNumNodes();
+
+    unsigned elem_region = 0;
+    assert(rCellPopulation.GetNumElements() % 3 == 0);
+    if (rElement.GetIndex() >= rCellPopulation.GetNumElements() / 3)
+    {
+        elem_region = 1;
+    }
+    if (rElement.GetIndex() >= 2 * (rCellPopulation.GetNumElements() / 3))
+    {
+        elem_region = 2;
+    }
+    if (ELEMENT_DIM != DIM)
+    {
+        elem_region = 3;
+    }
+
 
     // Make a vector to store the force on node i+1 from node i
     std::vector<c_vector<double, DIM> > force_to_next(num_nodes);
@@ -129,13 +147,16 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         // Index of the next node, calculated modulo number of nodes in this element
         unsigned next_idx = (node_idx + 1) % num_nodes;
 
+        // If element rather than lamina, calculate the stuffness multiplier
+        double stiffness_mult = CalculateStiffnessMult(elem_region, rElement.GetNode(node_idx)->GetRegion());
+
         // Morse force (derivative of Morse potential wrt distance between nodes
         force_to_next[node_idx] = rCellPopulation.rGetMesh().GetVectorFromAtoB(rElement.GetNodeLocation(node_idx),
                                                                                rElement.GetNodeLocation(next_idx));
         double normed_dist = norm_2(force_to_next[node_idx]);
 
         double morse_exp = exp((rest_length - normed_dist) / well_width);
-        force_to_next[node_idx] *= 2.0 * well_width * well_depth * morse_exp * (1.0 - morse_exp) / normed_dist;
+        force_to_next[node_idx] *= 2.0 * well_width * well_depth * stiffness_mult * morse_exp * (1.0 - morse_exp) / normed_dist;
     }
 
     // Add the contributions of springs adjacent to each node
@@ -149,6 +170,31 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         // Add the aggregate force contribution to the node
         rElement.GetNode(node_idx)->AddAppliedForceContribution(aggregate_force);
     }
+}
+
+template<unsigned DIM>
+double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(unsigned elem_region, unsigned node_region)
+{
+    double stiffness_mult = 1.0;
+
+    // Left
+    if (elem_region == 0)
+    {
+        if (node_region == RIGHT_APICAL_REGION || node_region == RIGHT_PERIAPICAL_REGION)
+        {
+            stiffness_mult = mStiffnessMult;
+        }
+    }
+    // Right
+    else if (elem_region == 2)
+    {
+        if (node_region == LEFT_APICAL_REGION || node_region == LEFT_PERIAPICAL_REGION)
+        {
+            stiffness_mult = mStiffnessMult;
+        }
+    }
+
+    return  stiffness_mult;
 }
 
 template <unsigned DIM>
@@ -222,6 +268,18 @@ template <unsigned DIM>
 void VarAdhesionMorseMembraneForce<DIM>::SetWellWidth(double wellWidth)
 {
     mWellWidth = wellWidth;
+}
+
+template <unsigned DIM>
+double VarAdhesionMorseMembraneForce<DIM>::GetStiffnessMult() const
+{
+    return mStiffnessMult;
+}
+
+template <unsigned DIM>
+void VarAdhesionMorseMembraneForce<DIM>::SetStiffnessMult(double stiffnessMult)
+{
+    mStiffnessMult = stiffnessMult;
 }
 
 // Explicit instantiation
