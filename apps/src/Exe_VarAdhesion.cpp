@@ -46,11 +46,13 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "FluidSource.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
+#include "ImmersedBoundaryMorseInteractionForce.hpp"
 #include "OffLatticeSimulation.hpp"
 #include "SmartPointers.hpp"
 #include "ThreeRegionInteractionForces.hpp"
 #include "TransitCellProliferativeType.hpp"
 #include "NoCellCycleModel.hpp"
+#include "ThreeRegionSvgWriter.hpp"
 
 #include "ThreeRegionMeshGenerator.hpp"
 #include "VarAdhesionMorseMembraneForce.hpp"
@@ -192,24 +194,28 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     MAKE_PTR(ImmersedBoundarySimulationModifier<2>, p_main_modifier);
     simulator.AddSimulationModifier(p_main_modifier);
 
+    MAKE_PTR(ThreeRegionSvgWriter<2>, p_svg_writer);
+    simulator.AddSimulationModifier(p_svg_writer);
+
     // Add force laws
     MAKE_PTR(VarAdhesionMorseMembraneForce<2>, p_boundary_force);
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
     p_boundary_force->SetElementWellDepth(corSpringConst);
     p_boundary_force->SetElementRestLength(corRestLength);
-    p_boundary_force->SetLaminaWellDepth(corSpringConst);
+    p_boundary_force->SetLaminaWellDepth(2.0 * corSpringConst);
     p_boundary_force->SetLaminaRestLength(corRestLength);
+    p_boundary_force->SetStiffnessMult(stiffnessMult);
 
-    MAKE_PTR(ThreeRegionInteractionForces<2>, p_cell_cell_force);
+    MAKE_PTR(ImmersedBoundaryMorseInteractionForce<2>, p_cell_cell_force);
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-    p_cell_cell_force->SetBasicInteractionStrength(traSpringConst);
-    p_cell_cell_force->SetAdhesionMultiplier(rhsAdhesionMod);
-    p_cell_cell_force->SetBasicInteractionDist(traRestLength);
-    cell_population.AddCellWriter<CellRegionWriter>();
+    p_cell_cell_force->SetWellDepth(traSpringConst);
+    p_cell_cell_force->SetRestLength(traRestLength);
+    p_cell_cell_force->SetLaminaRestLengthMult(1.0);
+    p_cell_cell_force->SetLaminaWellDepthMult(2.0);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
-    output_directory << "tooth_formation/Exe_GeneralThreeRegion/sim/" << idString;
+    output_directory << "tooth_formation/Exe_VarAdhesion/sim/" << idString;
     simulator.SetOutputDirectory(output_directory.str());
 
     // Calculate sampling multiple to have at least 5 frames per second on a 15 second video
@@ -218,19 +224,33 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(sampling_multiple);
+    simulator.SetSamplingTimestepMultiple(UINT_MAX);
     simulator.SetEndTime(numTimeSteps * dt);
+    p_svg_writer->SetSamplingMultiple(sampling_multiple);
 
     simulator.Solve();
 
-    // Calculate the total height variation along the lamina
-    double total_y_var = 0.0;
-    for (unsigned node_idx = 1 ; node_idx < p_mesh->GetLamina(0)->GetNumNodes(); node_idx++)
+    for (unsigned i=0; i<p_mesh->GetNumNodes(); i++)
     {
-        c_vector<double, 2> prev_location = p_mesh->GetLamina(0)->GetNode(node_idx-1)->rGetLocation();
-        c_vector<double, 2> this_location = p_mesh->GetLamina(0)->GetNode(node_idx)->rGetLocation();
+        PRINT_VECTOR(p_mesh->GetShortAxisOfElement(i));
+    }
 
-        total_y_var += fabs(p_mesh->GetVectorFromAtoB(prev_location, this_location)[1]);
+    // Calculate the maximal height variation along the lamina
+    double max_y = 0.0;
+    double min_y = 1.0;
+
+    for (unsigned node_idx = 0 ; node_idx < p_mesh->GetLamina(0)->GetNumNodes(); node_idx++)
+    {
+        double this_y = p_mesh->GetLamina(0)->GetNode(node_idx)->rGetLocation()[1];
+
+        if (this_y > max_y)
+        {
+            max_y = this_y;
+        }
+        if (this_y < min_y)
+        {
+            min_y = this_y;
+        }
     }
 
     OutputFileHandler results_handler(output_directory.str(), false);
@@ -238,10 +258,12 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
 
     // Output summary statistics to results file
     (*results_file) << "id" << ","
-                    << "total_y_var" << std::endl;
+                    << "max_y_var" << ","
+                    << "asymmetry_measure" << std::endl;
 
     (*results_file) << idString << ","
-                    << boost::lexical_cast<std::string>(total_y_var);
+                    << boost::lexical_cast<std::string>(max_y - min_y) << ","
+                    << p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(4, unit_vector<double>(2,0));
 
     // Tidy up
     results_file->close();
