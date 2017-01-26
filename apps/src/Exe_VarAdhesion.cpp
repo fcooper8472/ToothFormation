@@ -54,7 +54,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "NoCellCycleModel.hpp"
 #include "ThreeRegionSvgWriter.hpp"
 
-#include "ThreeRegionMeshGenerator.hpp"
+#include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
 #include "VarAdhesionMorseMembraneForce.hpp"
 
 #include <boost/make_shared.hpp>
@@ -64,6 +64,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
+#include <mesh/src/immersed_boundary/ImmersedBoundaryPalisadeMeshGenerator.hpp>
 
 /*
  * Prototype functions
@@ -168,7 +169,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
      * 5: Random y-variation
      * 6: Include membrane
      */
-    ThreeRegionMeshGenerator gen(15, 128, 0.1, 2.0, 0.0, true);
+    ImmersedBoundaryPalisadeMeshGenerator gen(15, 128, 0.1, 2.0, 0.0, true);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
     p_mesh->SetNumGridPtsXAndY(256);
@@ -229,11 +230,6 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_svg_writer->SetSamplingMultiple(sampling_multiple);
 
     simulator.Solve();
-
-    for (unsigned i=0; i<p_mesh->GetNumNodes(); i++)
-    {
-        PRINT_VECTOR(p_mesh->GetShortAxisOfElement(i));
-    }
 
     // Calculate the maximal height variation along the lamina
     double max_y = 0.0;
