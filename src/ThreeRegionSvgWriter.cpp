@@ -76,6 +76,25 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
         AddPointToSvgFile(svg_file, it->rGetLocation(), it->GetRegion(), node_rad);
     }
 
+    // Add glyphs to the svg file
+    unsigned num_elems_per_region = p_mesh->GetNumElements() / 3;
+    double glyph_rad = 0.005 * mSvgSize;
+    for (typename ImmersedBoundaryMesh<DIM, DIM>::ImmersedBoundaryElementIterator it = p_mesh->GetElementIteratorBegin();
+         it != p_mesh->GetElementIteratorEnd();
+         ++it)
+    {
+        c_vector<double, 2> short_axis = p_mesh->GetShortAxisOfElement(it->GetIndex());
+        int angle = static_cast<int>(atan2(short_axis[1], short_axis[0]) * 180.0 / M_PI);
+
+        AddGlyphToSvgFile(svg_file,
+                          p_mesh->GetCentroidOfElement(it->GetIndex()),
+                          static_cast<unsigned>(std::floor(it->GetIndex() / (double)num_elems_per_region)),
+                          glyph_rad,
+                          1.0, // \todo: why does short axis not work properly?
+                          angle);
+    }
+
+
     (*svg_file) << mSvgFooter;
 
     svg_file->close();
@@ -177,6 +196,67 @@ void ThreeRegionSvgWriter<DIM>::AddPointToSvgFile(out_stream& rSvgFile, c_vector
                     << "cx=\"" << scaled_x << "\" "
                     << "cy=\"" << scaled_y - mSvgSize << "\" "
                     << "r=\"" << rad << "\"/>" << "\n";
+    }
+}
+
+template <unsigned DIM>
+void ThreeRegionSvgWriter<DIM>::AddGlyphToSvgFile(out_stream& rSvgFile,
+                                                  c_vector<double, DIM> location,
+                                                  unsigned region,
+                                                  double rad,
+                                                  double elongation,
+                                                  int angle)
+{
+    double scaled_x = location[0] * mSvgSize;
+    double scaled_y = (1.0 - location[1]) * mSvgSize;
+
+    double max_size = std::max(rad, rad * elongation);
+
+    (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
+                << "transform=\"translate(" << scaled_x << " " << scaled_y
+                << ") rotate(" << angle << ")\" "
+                << "rx=\"" << rad << "\" "
+                << "ry=\"" << elongation * rad << "\""
+                << "/>" << "\n";
+
+    // Account for possible wrap-around of glyph in x
+    if (scaled_x < max_size)
+    {
+        (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
+                    << "transform=\"translate(" << scaled_x + mSvgSize << " " << scaled_y
+                    << ") rotate(" << angle << ")\" "
+                    << "rx=\"" << rad << "\" "
+                    << "ry=\"" << elongation * rad << "\""
+                    << "/>" << "\n";
+    }
+    else if (scaled_x > mSvgSize - max_size)
+    {
+        (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
+                    << "transform=\"translate(" << scaled_x - mSvgSize << " " << scaled_y
+                    << ") rotate(" << angle << ")\" "
+                    << "rx=\"" << rad << "\" "
+                    << "ry=\"" << elongation * rad << "\""
+                    << "/>" << "\n";
+    }
+
+    // Account for possible wrap-around of glyph in y
+    if (scaled_y < max_size)
+    {
+        (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
+                    << "transform=\"translate(" << scaled_x << " " << scaled_y + mSvgSize
+                    << ") rotate(" << angle << ")\" "
+                    << "rx=\"" << rad << "\" "
+                    << "ry=\"" << elongation * rad << "\""
+                    << "/>" << "\n";
+    }
+    else if (scaled_y > mSvgSize - max_size)
+    {
+        (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
+                    << "transform=\"translate(" << scaled_x << " " << scaled_y - mSvgSize
+                    << ") rotate(" << angle << ")\" "
+                    << "rx=\"" << rad << "\" "
+                    << "ry=\"" << elongation * rad << "\""
+                    << "/>" << "\n";
     }
 }
 

@@ -123,6 +123,20 @@ public:
     void AddPointToSvgFile(out_stream& rSvgFile, c_vector<double, DIM> location, unsigned region, double rad);
 
     /**
+     * Helper method for UpdateAtEndOfTimeStep().
+     *
+     * Add an ellipse glyph representing the element region.
+     *
+     * @param rSvgFile  the svg file stream to add to
+     * @param location the location of the point
+     * @param region metadata to allow different colouring for points
+     * @param rad the radius of circle representing the point
+     * @param elongation the elongation of the ellipse
+     * @param angle the angle at which to display the ellipse
+     */
+    void AddGlyphToSvgFile(out_stream& rSvgFile, c_vector<double, DIM> location, unsigned region, double rad, double elongation, int angle);
+
+    /**
      * Overridden OutputSimulationModifierParameters() method.
      * Output any simulation modifier parameters to file.
      *
