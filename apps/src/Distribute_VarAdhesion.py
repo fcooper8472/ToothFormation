@@ -33,25 +33,26 @@ if not(os.path.isfile(executable)):
     quit('Py: Could not find executable: ' + executable)
 
 # List of command line arguments for the executable, and corresponding list of parameter names
-command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --TRL ', ' --TSC ', ' --AD ', ' --DI ', ' --RM ', ' --TS ']
+command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --TRL ', ' --TSC ', ' --AD ', ' --DI ', ' --SM ', ' --RM ', ' --TS ']
 params_list = ['simulation_id', 'cor_rest_length', 'cor_spring_const', 'tra_rest_length', 'tra_spring_const',
-               'adhesion_modifier', 'interaction_dist', 'remesh_frequency', 'num_time_steps']
+               'adhesion_modifier', 'interaction_dist', 'stiffness_mult', 'remesh_frequency', 'num_time_steps']
 
 # Time string when script is run, used for creating a unique archive name
 today = time.strftime('%Y-%m-%dT%H%M')
 
 # Param ranges (in lists, for itertools product)
 crl = [0.25]
-csc = [1e6]
+csc = [1e8]
 trl = [0.01]
-tsc = np.linspace(1e6, 2e6, num=1)
-ad = np.linspace(1.4, 1.6, num=1)
+tsc = np.linspace(5e7, 2e7, num=1)
+ad = [1.0]
 di = [0.02]
-rf = [250]
+sm = np.linspace(0.3, 0.5, num=3)
+rf = [50]
 ts = [1000]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
-combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, rf, ts))
+combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, sm, rf, ts))
 
 
 def main():

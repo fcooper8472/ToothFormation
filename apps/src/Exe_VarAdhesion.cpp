@@ -69,7 +69,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SetupSingletons();
 void DestroySingletons();
 void SetupAndRunSimulation(std::string idString, double corRestLength, double corSpringConst, double traRestLength,
-                           double traSpringConst, double rhsAdhesionMod, double interactionDist,
+                           double traSpringConst, double rhsAdhesionMod, double interactionDist, double stiffnessMult,
                            unsigned reMeshFreq, unsigned numTimeSteps);
 void OutputToConsole(std::string idString, std::string leading);
 
@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
                     ("TSC", boost::program_options::value<double>()->default_value(0.0),"Transmembrane spring constant")
                     ("AD", boost::program_options::value<double>()->default_value(0.0),"Adhesion modifier")
                     ("DI", boost::program_options::value<double>()->default_value(0.0),"Interaction distance for cell-cell forces")
+                    ("SM", boost::program_options::value<double>()->default_value(0.0),"Stiffness multiplier for membrane forces")
                     ("RM", boost::program_options::value<unsigned>()->default_value(1u),"ReMesh frequency")
                     ("TS", boost::program_options::value<unsigned>()->default_value(1000u),"Number of time steps");
     
@@ -112,13 +113,14 @@ int main(int argc, char *argv[])
     double tra_spring_const = variables_map["TSC"].as<double>();
     double rhs_adhesion_mod = variables_map["AD"].as<double>();
     double interaction_dist = variables_map["DI"].as<double>();
+    double stiffness_mult = variables_map["SM"].as<double>();
     unsigned remesh_freq = variables_map["RM"].as<unsigned>();
     unsigned num_time_steps = variables_map["TS"].as<unsigned>();
 
     OutputToConsole(id_string, "Started");
     SetupSingletons();
     SetupAndRunSimulation(id_string, cor_rest_length, cor_spring_const, tra_rest_length, tra_spring_const,
-                          rhs_adhesion_mod, interaction_dist, remesh_freq, num_time_steps);
+                          rhs_adhesion_mod, interaction_dist, stiffness_mult, remesh_freq, num_time_steps);
     DestroySingletons();
     OutputToConsole(id_string, "Completed");
 }
@@ -153,17 +155,17 @@ void OutputToConsole(std::string idString, std::string leading)
 }
 
 void SetupAndRunSimulation(std::string idString, double corRestLength, double corSpringConst, double traRestLength,
-                           double traSpringConst, double rhsAdhesionMod, double interactionDist,
+                           double traSpringConst, double rhsAdhesionMod, double interactionDist, double stiffnessMult,
                            unsigned reMeshFreq, unsigned numTimeSteps)
 {
-        /*
-         * 1: Num cells
-         * 2: Num nodes per cell
-         * 3: Superellipse exponent
-         * 4: Superellipse aspect ratio
-         * 5: Random y-variation
-         * 6: Include membrane
-         */
+    /*
+     * 1: Num cells
+     * 2: Num nodes per cell
+     * 3: Superellipse exponent
+     * 4: Superellipse aspect ratio
+     * 5: Random y-variation
+     * 6: Include membrane
+     */
     ThreeRegionMeshGenerator gen(15, 128, 0.1, 2.0, 0.0, true);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
