@@ -39,6 +39,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template <unsigned DIM>
 ThreeRegionSvgWriter<DIM>::ThreeRegionSvgWriter()
         : AbstractCellBasedSimulationModifier<DIM>(),
+          mSamplingMultiple(100u),
           mSvgSize(1600.0),
           mOutputDirectory(""),
           mSvgHeader(""),
@@ -54,50 +55,53 @@ ThreeRegionSvgWriter<DIM>::~ThreeRegionSvgWriter()
 template <unsigned DIM>
 void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM, DIM>& rCellPopulation)
 {
-    ImmersedBoundaryMesh<DIM, DIM>* p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM>*>(&(rCellPopulation.rGetMesh()));
-
-    // Get the number of time steps elapsed to use in the file name, and zero-pad it
-    std::stringstream time;
-    time << std::setfill('0') << std::setw(6) << SimulationTime::Instance()->GetTimeStepsElapsed();
-
-    // Open the svg file for writing
-    std::string full_file_name = "results_" + time.str() + ".svg";
-    OutputFileHandler results_handler(mOutputDirectory, false);
-    out_stream svg_file = results_handler.OpenOutputFile(full_file_name);
-
-    (*svg_file) << mSvgHeader;
-
-    // Add all nodes to the svg file
-    double node_rad = p_mesh->GetAverageNodeSpacingOfElement(0, false) * 0.35 * mSvgSize;
-    for (typename AbstractMesh<DIM, DIM>::NodeIterator it = p_mesh->GetNodeIteratorBegin();
-         it != p_mesh->GetNodeIteratorEnd();
-         ++it)
+    if (SimulationTime::Instance()->GetTimeStepsElapsed() % mSamplingMultiple == 0)
     {
-        AddPointToSvgFile(svg_file, it->rGetLocation(), it->GetRegion(), node_rad);
-    }
+        ImmersedBoundaryMesh<DIM, DIM> *p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM> *>(&(rCellPopulation.rGetMesh()));
 
-    // Add glyphs to the svg file
-    unsigned num_elems_per_region = p_mesh->GetNumElements() / 3;
-    double glyph_rad = 0.005 * mSvgSize;
-    for (typename ImmersedBoundaryMesh<DIM, DIM>::ImmersedBoundaryElementIterator it = p_mesh->GetElementIteratorBegin();
-         it != p_mesh->GetElementIteratorEnd();
-         ++it)
-    {
-        c_vector<double, 2> short_axis = p_mesh->GetShortAxisOfElement(it->GetIndex());
-        int angle = static_cast<int>(atan2(short_axis[1], short_axis[0]) * 180.0 / M_PI);
+        // Get the number of time steps elapsed to use in the file name, and zero-pad it
+        std::stringstream time;
+        time << std::setfill('0') << std::setw(6) << SimulationTime::Instance()->GetTimeStepsElapsed();
 
-        AddGlyphToSvgFile(svg_file,
-                          p_mesh->GetCentroidOfElement(it->GetIndex()),
-                          static_cast<unsigned>(std::floor(it->GetIndex() / (double)num_elems_per_region)),
-                          glyph_rad,
-                          1.0, // \todo: why does short axis not work properly?
-                          angle);
-    }
+        // Open the svg file for writing
+        std::string full_file_name = "results_" + time.str() + ".svg";
+        OutputFileHandler results_handler(mOutputDirectory, false);
+        out_stream svg_file = results_handler.OpenOutputFile(full_file_name);
+
+        (*svg_file) << mSvgHeader;
+
+        // Add all nodes to the svg file
+        double node_rad = p_mesh->GetAverageNodeSpacingOfElement(0, false) * 0.35 * mSvgSize;
+        for (typename AbstractMesh<DIM, DIM>::NodeIterator it = p_mesh->GetNodeIteratorBegin();
+             it != p_mesh->GetNodeIteratorEnd();
+             ++it)
+        {
+            AddPointToSvgFile(svg_file, it->rGetLocation(), it->GetRegion(), node_rad);
+        }
+
+        // Add glyphs to the svg file
+        unsigned num_elems_per_region = p_mesh->GetNumElements() / 3;
+        double glyph_rad = 0.005 * mSvgSize;
+        for (typename ImmersedBoundaryMesh<DIM, DIM>::ImmersedBoundaryElementIterator it = p_mesh->GetElementIteratorBegin();
+             it != p_mesh->GetElementIteratorEnd();
+             ++it)
+        {
+            c_vector<double, 2> short_axis = p_mesh->GetShortAxisOfElement(it->GetIndex());
+            int angle = static_cast<int>(atan2(short_axis[1], short_axis[0]) * 180.0 / M_PI);
+
+            AddGlyphToSvgFile(svg_file,
+                              p_mesh->GetCentroidOfElement(it->GetIndex()),
+                              static_cast<unsigned>(std::floor(it->GetIndex() / (double)num_elems_per_region)),
+                              glyph_rad,
+                              1.0, // \todo: why does short axis not work properly?
+                              angle);
+        }
 
 
     (*svg_file) << mSvgFooter;
 
-    svg_file->close();
+        svg_file->close();
+    }
 }
 
 template <unsigned DIM>
@@ -265,6 +269,30 @@ void ThreeRegionSvgWriter<DIM>::OutputSimulationModifierParameters(out_stream& r
 {
     // Call method on direct parent class
     AbstractCellBasedSimulationModifier<DIM>::OutputSimulationModifierParameters(rParamsFile);
+}
+
+template <unsigned DIM>
+unsigned ThreeRegionSvgWriter<DIM>::GetSamplingMultiple() const
+{
+    return mSamplingMultiple;
+}
+
+template <unsigned DIM>
+void ThreeRegionSvgWriter<DIM>::SetSamplingMultiple(unsigned samplingMultiple)
+{
+    mSamplingMultiple = samplingMultiple;
+}
+
+template <unsigned DIM>
+double ThreeRegionSvgWriter<DIM>::GetSvgSize() const
+{
+    return mSvgSize;
+}
+
+template <unsigned DIM>
+void ThreeRegionSvgWriter<DIM>::SetSvgSize(double svgSize)
+{
+    mSvgSize = svgSize;
 }
 
 // Explicit instantiation

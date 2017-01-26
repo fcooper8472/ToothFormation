@@ -49,6 +49,9 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template <unsigned DIM>
 class ThreeRegionSvgWriter : public AbstractCellBasedSimulationModifier<DIM, DIM>
 {
+    /** The sampling frequency for exporting svg frames */
+    unsigned mSamplingMultiple;
+
     /** The width and height in pixels of the svg file */
     double mSvgSize;
 
@@ -73,6 +76,7 @@ class ThreeRegionSvgWriter : public AbstractCellBasedSimulationModifier<DIM, DIM
     template <class Archive>
     void serialize(Archive& archive, const unsigned int version)
     {
+        archive& mSamplingMultiple;
         archive& mSvgSize;
         archive& mOutputDirectory;
         archive& mSvgHeader;
@@ -143,6 +147,18 @@ public:
      * @param rParamsFile the file stream to which the parameters are output
      */
     void OutputSimulationModifierParameters(out_stream& rParamsFile);
+
+    /** @return mSamplingMultiple **/
+    unsigned GetSamplingMultiple() const;
+
+    /** @param samplingMultiple the new value of mSamplingMultiple */
+    void SetSamplingMultiple(unsigned samplingMultiple);
+
+    /** @return mSvgSize **/
+    double GetSvgSize() const;
+
+    /** @param svgSize the new value of mSvgSize */
+    void SetSvgSize(double svgSize);
 };
 
 #include "SerializationExportWrapper.hpp"
