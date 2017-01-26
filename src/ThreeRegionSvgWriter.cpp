@@ -97,8 +97,13 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
                               angle);
         }
 
+        (*svg_file) << "<text x=\"" << 0.05 * mSvgSize << "\" y=\"" << (0.45 + 9.0 / 32.0) * mSvgSize << "\" "
+                    << "font-size=\"30px\" font-family=\"monospace\">"
+                    << "ts=" << SimulationTime::Instance()->GetTimeStepsElapsed()
+                    << "</text>";
 
-    (*svg_file) << mSvgFooter;
+
+        (*svg_file) << mSvgFooter;
 
         svg_file->close();
     }
@@ -272,13 +277,13 @@ void ThreeRegionSvgWriter<DIM>::OutputSimulationModifierParameters(out_stream& r
 }
 
 template <unsigned DIM>
-unsigned ThreeRegionSvgWriter<DIM>::GetSamplingMultiple() const
+unsigned int ThreeRegionSvgWriter<DIM>::GetSamplingMultiple() const
 {
     return mSamplingMultiple;
 }
 
 template <unsigned DIM>
-void ThreeRegionSvgWriter<DIM>::SetSamplingMultiple(unsigned samplingMultiple)
+void ThreeRegionSvgWriter<DIM>::SetSamplingMultiple(unsigned int samplingMultiple)
 {
     mSamplingMultiple = samplingMultiple;
 }
