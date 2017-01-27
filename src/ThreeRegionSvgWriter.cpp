@@ -93,7 +93,7 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
                               p_mesh->GetCentroidOfElement(it->GetIndex()),
                               static_cast<unsigned>(std::floor(it->GetIndex() / (double)num_elems_per_region)),
                               glyph_rad,
-                              1.0, // \todo: why does short axis not work properly?
+                              p_mesh->GetElongationShapeFactorOfElement(it->GetIndex()),
                               angle);
         }
 
