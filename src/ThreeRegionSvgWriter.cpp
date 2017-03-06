@@ -127,6 +127,7 @@ void ThreeRegionSvgWriter<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCe
     std::string region6_col = "#000099"; // dark blue
     std::string region7_col = "#0000cc"; // light blue
     std::string region8_col = "#FFFFFF"; // white
+    std::string region9_col = "#000000"; // black
     std::string glyph0_col = "DarkRed"; // white
     std::string glyph1_col = "DarkBlue"; // white
     std::string glyph2_col = "DarkGreen"; // white
@@ -154,6 +155,7 @@ void ThreeRegionSvgWriter<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCe
            << "\t.node_6{fill:" << region6_col << ";}" << "\n"
            << "\t.node_7{fill:" << region7_col << ";}" << "\n"
            << "\t.node_8{fill:" << region8_col << ";}" << "\n"
+           << "\t.node_9{fill:" << region9_col << ";}" << "\n"
            << "\t.glyph_0{fill:" << glyph0_col << ";}" << "\n"
            << "\t.glyph_1{fill:" << glyph1_col << ";}" << "\n"
            << "\t.glyph_2{fill:" << glyph2_col << ";}" << "\n"
