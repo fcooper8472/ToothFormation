@@ -36,7 +36,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cxxtest/TestSuite.h>
 
 #include "CellId.hpp"
-#include "CellRegionWriter.hpp"
 #include "CellsGenerator.hpp"
 #include "CellsGenerator.hpp"
 #include "CheckpointArchiveTypes.hpp"
@@ -44,7 +43,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ExecutableSupport.hpp"
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "FluidSource.hpp"
-#include "ImmersedBoundaryCellCellInteractionForce.hpp"
 #include "ImmersedBoundaryLinearMembraneForce.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
@@ -203,7 +201,6 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_cell_cell_force->SetBasicInteractionStrength(traSpringConst);
     p_cell_cell_force->SetAdhesionMultiplier(rhsAdhesionMod);
     p_cell_cell_force->SetBasicInteractionDist(traRestLength);
-    cell_population.AddCellWriter<CellRegionWriter>();
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
