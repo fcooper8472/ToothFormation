@@ -47,6 +47,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
 #include "ImmersedBoundaryMorseInteractionForce.hpp"
+#include "ContactRegionTaggingModifier.hpp"
 #include "OffLatticeSimulation.hpp"
 #include "SmartPointers.hpp"
 #include "ThreeRegionInteractionForces.hpp"
@@ -197,6 +198,9 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
 
     MAKE_PTR(ThreeRegionSvgWriter<2>, p_svg_writer);
     simulator.AddSimulationModifier(p_svg_writer);
+
+    MAKE_PTR(ContactRegionTaggingModifier<2>, p_tagger);
+    simulator.AddSimulationModifier(p_tagger);
 
     // Add force laws
     MAKE_PTR(VarAdhesionMorseMembraneForce<2>, p_boundary_force);

@@ -44,12 +44,12 @@ today = time.strftime('%Y-%m-%dT%H%M')
 crl = [0.25]
 csc = [1e8]
 trl = [0.01]
-tsc = np.linspace(5e7, 2e7, num=1)
+tsc = [1e7]#np.linspace(5e7, 2e7, num=1)
 ad = [1.0]
 di = [0.02]
-sm = np.linspace(0.3, 0.5, num=3)
+sm = np.linspace(0.3, 0.5, num=1)
 rf = [50]
-ts = [1000]
+ts = [100]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
 combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, sm, rf, ts))
