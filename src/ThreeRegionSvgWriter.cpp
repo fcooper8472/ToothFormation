@@ -87,7 +87,9 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
              ++it)
         {
             c_vector<double, 2> short_axis = p_mesh->GetShortAxisOfElement(it->GetIndex());
-            int angle = static_cast<int>(atan2(short_axis[1], short_axis[0]) * 180.0 / M_PI);
+            short_axis = short_axis[0] < 0.0 ? short_axis : -short_axis;
+
+            int angle = 90 + static_cast<int>(atan2(short_axis[0], short_axis[1]) * 180.0 / M_PI);
 
             AddGlyphToSvgFile(svg_file,
                               p_mesh->GetCentroidOfElement(it->GetIndex()),
