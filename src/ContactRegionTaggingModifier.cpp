@@ -55,7 +55,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
     ImmersedBoundaryMesh<DIM, DIM>* p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM>*>(&(rCellPopulation.rGetMesh()));
 
     // Just get this once
-    double nbr_dist = p_mesh->GetNeighbourDist();
+    double nbr_dist = 5.0 * p_mesh->GetNeighbourDist();
 
     // Iterate over elements
     for (typename ImmersedBoundaryMesh<DIM, DIM>::ImmersedBoundaryElementIterator elem_it = p_mesh->GetElementIteratorBegin();
@@ -67,6 +67,10 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         // Orient short axis to point in the positive x direction
         c_vector<double, DIM> short_axis = p_mesh->GetShortAxisOfElement(elem_it->GetIndex());
         short_axis = short_axis[0] > 0.0 ? short_axis : -short_axis;
+
+        // We need to find the furthest right & left basal nodes
+        unsigned furthest_right_idx = UNSIGNED_UNSET;
+        unsigned furthest_left_idx = UNSIGNED_UNSET;
 
         for (unsigned node_idx = 0; node_idx < elem_it->GetNumNodes(); ++node_idx)
         {
@@ -91,19 +95,48 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
                         // If it's below the centroid it will be the basal lamina
                         if (p_this_node->rGetLocation()[1] < centroid[1])
                         {
+                            // If this is the first such node, it's the candidate for
+                            if (furthest_right_idx == UNSIGNED_UNSET)
+                            {
+                                furthest_right_idx = node_idx;
+                                furthest_left_idx = node_idx;
+                            }
+
                             p_this_node->SetRegion(node_on_left ? LEFT_BASAL_REGION : RIGHT_BASAL_REGION);
+
+                            double distance_right = p_mesh->GetVectorFromAtoB(centroid, p_this_node->rGetLocation())[0];
+
+                            if (distance_right > elem_it->GetNode(furthest_right_idx)->rGetLocation()[0])
+                            {
+                                furthest_right_idx = node_idx;
+                            }
+                            if (distance_right < elem_it->GetNode(furthest_left_idx)->rGetLocation()[0])
+                            {
+                                furthest_left_idx = node_idx;
+                            }
                         }
-                        else // it's the apical lamina (if present)
-                        {
-                            p_this_node->SetRegion(node_on_left ? LEFT_APICAL_REGION : RIGHT_APICAL_REGION);
-                        }
-                    }
-                    else // it's a regular element
-                    {
-                        p_this_node->SetRegion(node_on_left ? LEFT_LATERAL_REGION : RIGHT_LATERAL_REGION);
+                        break;
                     }
                 }
             }
+
+//                    else // it's a regular element
+//                    {
+////                        p_this_node->SetRegion(node_on_left ? LEFT_LATERAL_REGION : RIGHT_LATERAL_REGION);
+//                    }
+//                }
+//            }
+        }
+
+        if (p_furthest_left == NULL || p_furthest_right == NULL)
+        {
+            EXCEPTION("Nothing near the basal lamina?");
+        }
+
+        bool keep_going = true;
+        while (keep_going)
+        {
+            unsigned local_idx = elem_it->GetNodeLocalIndex(p_furthest_right->GetIndex());
         }
     }
 
