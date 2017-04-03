@@ -214,7 +214,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     MAKE_PTR(ImmersedBoundaryMorseInteractionForce<2>, p_cell_cell_force);
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
     p_cell_cell_force->SetWellDepth(traSpringConst);
-    p_cell_cell_force->SetRestLength(traRestLength);
+    p_cell_cell_force->SetRestLength(0.25 * interactionDist * traRestLength);
     p_cell_cell_force->SetLaminaRestLengthMult(1.0);
     p_cell_cell_force->SetLaminaWellDepthMult(2.0);
 

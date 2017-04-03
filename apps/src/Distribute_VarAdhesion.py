@@ -43,7 +43,7 @@ today = time.strftime('%Y-%m-%dT%H%M')
 # Param ranges (in lists, for itertools product)
 crl = [0.25]
 csc = [1e8]
-trl = [0.01]
+trl = [1.0]
 tsc = [1e7]#np.linspace(5e7, 2e7, num=1)
 ad = [1.0]
 di = [0.02]
