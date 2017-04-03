@@ -49,7 +49,7 @@ ad = [1.0]
 di = [0.02]
 sm = np.linspace(0.3, 0.5, num=1)
 rf = [50]
-ts = [1000]
+ts = [10000]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
 combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, sm, rf, ts))
@@ -90,6 +90,8 @@ def run_simulations():
             this_command += command_line_args[arg+1] + str(param_set[arg])
 
         command_list.append(this_command)
+
+        print(this_command)
 
     params_file.close()
 
