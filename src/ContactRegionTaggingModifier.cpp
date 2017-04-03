@@ -63,6 +63,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
          ++elem_it)
     {
         const c_vector<double, DIM> centroid = p_mesh->GetCentroidOfElement(elem_it->GetIndex());
+        const unsigned num_nodes_elem = elem_it->GetNumNodes();
 
         // Orient short axis to point in the positive x direction
         c_vector<double, DIM> short_axis = p_mesh->GetShortAxisOfElement(elem_it->GetIndex());
@@ -72,7 +73,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         unsigned furthest_right_idx = UNSIGNED_UNSET;
         unsigned furthest_left_idx = UNSIGNED_UNSET;
 
-        for (unsigned node_idx = 0; node_idx < elem_it->GetNumNodes(); ++node_idx)
+        for (unsigned node_idx = 0; node_idx < num_nodes_elem; ++node_idx)
         {
             // Get the current node, and determine whether it's on the left or right of the long axis
             Node<DIM>* p_this_node = p_mesh->GetNode(elem_it->GetNodeGlobalIndex(node_idx));
@@ -129,24 +130,30 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             EXCEPTION("Nothing near the basal lamina?");
         }
 
-        bool keep_going = true;
+        unsigned half_num_nodes = static_cast<unsigned>(0.5 * num_nodes_elem);
+
         unsigned this_idx = furthest_right_idx;
         unsigned num_right_lat = 0;
-        while (keep_going)
+        unsigned num_consecutive_misses = 0;
+        while (num_consecutive_misses < 5)
         {
-            keep_going = false;
+            num_consecutive_misses++;
+            num_right_lat++;
 
-            this_idx = (this_idx + 1) % elem_it->GetNumNodes();
-            Node<DIM>* p_this_node = elem_it->GetNode(this_idx);
-
-            if (num_right_lat < 10)
+            if (num_right_lat < 15)
             {
-                p_this_node->SetRegion(RIGHT_LATERAL_REGION);
-
-                keep_going = true;
-                num_right_lat++;
+                num_consecutive_misses = 0;
                 continue;
             }
+
+            if (num_right_lat == half_num_nodes)
+            {
+                num_consecutive_misses = UNSIGNED_UNSET;
+                break;
+            }
+
+            this_idx = (this_idx + 1) % num_nodes_elem;
+            Node<DIM>* p_this_node = elem_it->GetNode(this_idx);
 
             // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
             const std::vector<unsigned>& node_neighbours = p_this_node->rGetNeighbours();
@@ -160,41 +167,48 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
                 {
                     if (p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
                     {
-                        p_this_node->SetRegion(RIGHT_LATERAL_REGION);
-
-                        keep_going = true;
-                        num_right_lat++;
+                        num_consecutive_misses = 0;
                         break;
                     }
                 }
             }
         }
 
-        unsigned num_periapical = static_cast<unsigned>(0.2 * num_right_lat);
-        for (unsigned i = 0; i < num_periapical; ++i)
+        if (num_consecutive_misses != UNSIGNED_UNSET)
         {
-            unsigned local_idx = (furthest_right_idx + num_right_lat - i) % elem_it->GetNumNodes();
-            elem_it->GetNode(local_idx)->SetRegion(RIGHT_PERIAPICAL_REGION);
+            num_right_lat -= num_consecutive_misses;
+
+            unsigned num_lateral = static_cast<unsigned>(0.8 * num_right_lat);
+            for (unsigned i = 0; i < num_right_lat; ++i)
+            {
+                unsigned local_idx = (furthest_right_idx + i) % num_nodes_elem;
+                elem_it->GetNode(local_idx)->SetRegion(
+                        i <= num_lateral ? RIGHT_LATERAL_REGION : RIGHT_PERIAPICAL_REGION);
+            }
         }
 
-        keep_going = true;
         this_idx = furthest_left_idx;
         unsigned num_left_lat = 0;
-        while (keep_going)
+        num_consecutive_misses = 0;
+        while (num_consecutive_misses < 5)
         {
-            keep_going = false;
+            num_consecutive_misses++;
+            num_left_lat++;
 
-            this_idx = (this_idx + elem_it->GetNumNodes() - 1) % elem_it->GetNumNodes();
-            Node<DIM>* p_this_node = elem_it->GetNode(this_idx);
-
-            if (num_left_lat < 10)
+            if (num_left_lat < 15)
             {
-                p_this_node->SetRegion(LEFT_LATERAL_REGION);
-
-                keep_going = true;
-                num_left_lat++;
+                num_consecutive_misses = 0;
                 continue;
             }
+
+            if (num_left_lat == half_num_nodes)
+            {
+                num_consecutive_misses = UNSIGNED_UNSET;
+                break;
+            }
+
+            this_idx = (this_idx + num_nodes_elem - 1) % num_nodes_elem;
+            Node<DIM>* p_this_node = elem_it->GetNode(this_idx);
 
             // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
             const std::vector<unsigned>& node_neighbours = p_this_node->rGetNeighbours();
@@ -208,21 +222,32 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
                 {
                     if (p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
                     {
-                        p_this_node->SetRegion(LEFT_LATERAL_REGION);
-
-                        keep_going = true;
-                        num_left_lat++;
+                        num_consecutive_misses = 0;
                         break;
                     }
                 }
             }
         }
 
-        num_periapical = static_cast<unsigned>(0.2 * num_left_lat);
-        for (unsigned i = 0; i < num_periapical; ++i)
+        if (num_consecutive_misses == UNSIGNED_UNSET)
         {
-            unsigned local_idx = (furthest_left_idx + elem_it->GetNumNodes() - num_left_lat + i) % elem_it->GetNumNodes();
-            elem_it->GetNode(local_idx)->SetRegion(LEFT_PERIAPICAL_REGION);
+            for (unsigned i = furthest_right_idx + 1; i != furthest_left_idx; i = (i + 1) % num_nodes_elem )
+            {
+                Node<DIM>* p_this_node = elem_it->GetNode(i);
+                bool node_on_left = inner_prod(short_axis, p_mesh->GetVectorFromAtoB(centroid, p_this_node->rGetLocation())) < 0.0;
+                p_this_node->SetRegion(node_on_left ? LEFT_LATERAL_REGION : RIGHT_LATERAL_REGION);
+            }
+        }
+        else
+        {
+            num_left_lat -= num_consecutive_misses;
+
+            unsigned num_lateral = static_cast<unsigned>(0.8 * num_left_lat);
+            for (unsigned i = 0; i < num_left_lat; ++i)
+            {
+                unsigned local_idx = (furthest_left_idx + num_nodes_elem - i) % num_nodes_elem;
+                elem_it->GetNode(local_idx)->SetRegion(i <= num_lateral ? LEFT_LATERAL_REGION : LEFT_PERIAPICAL_REGION);
+            }
         }
     }
 }
