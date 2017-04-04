@@ -176,7 +176,7 @@ void ApicalAndBasalTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopul
         unsigned num_nodes_left = (num_nodes_elem + ltmost_basal_idx - ltmost_apical_idx - 1) % num_nodes_elem;
         unsigned num_left_lateral = static_cast<unsigned>(0.8 * num_nodes_left);
 
-        for (unsigned i = 0; i < num_nodes_right; ++i)
+        for (unsigned i = 0; i < num_nodes_left; ++i)
         {
             Node<DIM>* p_this_node = elem_it->GetNode((num_nodes_elem + ltmost_basal_idx - 1 - i) % num_nodes_elem);
             p_this_node->SetRegion(i < num_left_lateral ? LEFT_LATERAL_REGION : LEFT_PERIAPICAL_REGION);
