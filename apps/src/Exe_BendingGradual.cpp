@@ -74,7 +74,7 @@ void SetupSingletons();
 void DestroySingletons();
 void SetupAndRunSimulation(std::string idString, double corRestLength, double corSpringConst, double traRestLength,
                            double traSpringConst, double rhsAdhesionMod, double interactionDist, double stiffnessMult,
-                           unsigned reMeshFreq, unsigned numTimeSteps);
+                           unsigned reMeshFreq, unsigned numTimeSteps, bool apicalLamina);
 void OutputToConsole(std::string idString, std::string leading);
 
 int main(int argc, char *argv[])
@@ -95,8 +95,9 @@ int main(int argc, char *argv[])
                     ("DI", boost::program_options::value<double>()->default_value(0.0),"Interaction distance for cell-cell forces")
                     ("SM", boost::program_options::value<double>()->default_value(0.0),"Stiffness multiplier for membrane forces")
                     ("RM", boost::program_options::value<unsigned>()->default_value(1u),"ReMesh frequency")
-                    ("TS", boost::program_options::value<unsigned>()->default_value(1000u),"Number of time steps");
-    
+                    ("TS", boost::program_options::value<unsigned>()->default_value(1000u),"Number of time steps")
+                    ("AL", boost::program_options::value<bool>()->default_value(false),"Whether to include apical lamina");
+
     // Define parse command line into variables_map
     boost::program_options::variables_map variables_map;
     boost::program_options::store(parse_command_line(argc, argv, general_options), variables_map);
@@ -120,11 +121,13 @@ int main(int argc, char *argv[])
     double stiffness_mult = variables_map["SM"].as<double>();
     unsigned remesh_freq = variables_map["RM"].as<unsigned>();
     unsigned num_time_steps = variables_map["TS"].as<unsigned>();
+    bool apical_lamina = variables_map["AL"].as<bool>();
 
     OutputToConsole(id_string, "Started");
     SetupSingletons();
     SetupAndRunSimulation(id_string, cor_rest_length, cor_spring_const, tra_rest_length, tra_spring_const,
-                          rhs_adhesion_mod, interaction_dist, stiffness_mult, remesh_freq, num_time_steps);
+                          rhs_adhesion_mod, interaction_dist, stiffness_mult, remesh_freq, num_time_steps,
+                          apical_lamina);
     DestroySingletons();
     OutputToConsole(id_string, "Completed");
 }
@@ -160,7 +163,7 @@ void OutputToConsole(std::string idString, std::string leading)
 
 void SetupAndRunSimulation(std::string idString, double corRestLength, double corSpringConst, double traRestLength,
                            double traSpringConst, double rhsAdhesionMod, double interactionDist, double stiffnessMult,
-                           unsigned reMeshFreq, unsigned numTimeSteps)
+                           unsigned reMeshFreq, unsigned numTimeSteps, bool apicalLamina)
 {
     /*
      * 1: Num cells
@@ -168,9 +171,10 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
      * 3: Superellipse exponent
      * 4: Superellipse aspect ratio
      * 5: Random y-variation
-     * 6: Include membrane
+     * 6: Include basal lamina
+     * 7: Include apical lamina
      */
-    ImmersedBoundaryPalisadeMeshGenerator gen(15, 128, 0.1, 2.0, 0.0, true, true);
+    ImmersedBoundaryPalisadeMeshGenerator gen(15, 128, 0.1, 2.0, 0.0, true, apicalLamina);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
     p_mesh->SetNumGridPtsXAndY(256);
@@ -199,8 +203,16 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     MAKE_PTR(GradualSvgWriter<2>, p_svg_writer);
     simulator.AddSimulationModifier(p_svg_writer);
 
-    MAKE_PTR(ApicalAndBasalTaggingModifier<2>, p_tagger);
-    simulator.AddSimulationModifier(p_tagger);
+    if (apicalLamina)
+    {
+        MAKE_PTR(ApicalAndBasalTaggingModifier<2>, p_tagger);
+        simulator.AddSimulationModifier(p_tagger);
+    }
+    else
+    {
+        MAKE_PTR(ContactRegionTaggingModifier<2>, p_tagger);
+        simulator.AddSimulationModifier(p_tagger);
+    }
 
     // Add force laws
     MAKE_PTR(GradualChangeMorseMembraneForce<2>, p_boundary_force);
@@ -220,7 +232,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
-    output_directory << "tooth_formation/Exe_VarAdhesionWithApical/sim/" << idString;
+    output_directory << "tooth_formation/Exe_BendingGradual/sim/" << idString;
     simulator.SetOutputDirectory(output_directory.str());
 
     // Calculate sampling multiple to have at least 5 frames per second on a 15 second video
