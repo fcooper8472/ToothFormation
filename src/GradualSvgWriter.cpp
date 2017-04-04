@@ -127,10 +127,6 @@ void GradualSvgWriter<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCellPo
     std::string region7_col = "#0000cc"; // light blue
     std::string region8_col = "#FFFFFF"; // white
     std::string region9_col = "#000000"; // black
-    std::string glyph0_col = "DarkRed"; // white
-    std::string glyph1_col = "DarkBlue"; // white
-    std::string glyph2_col = "DarkGreen"; // white
-
     std::stringstream header;
 
     // Set precision so as not to write out too many decimal places of uncompressed text
@@ -167,12 +163,6 @@ void GradualSvgWriter<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCellPo
            << "\t.node_8{fill:" << region8_col << ";}"
            << "\n"
            << "\t.node_9{fill:" << region9_col << ";}"
-           << "\n"
-           << "\t.glyph_0{fill:" << glyph0_col << ";}"
-           << "\n"
-           << "\t.glyph_1{fill:" << glyph1_col << ";}"
-           << "\n"
-           << "\t.glyph_2{fill:" << glyph2_col << ";}"
            << "\n"
            << "</style>"
            << "\n";
@@ -245,34 +235,40 @@ void GradualSvgWriter<DIM>::AddGlyphToSvgFile(out_stream& rSvgFile,
     double scaled_x = location[0] * mSvgSize;
     double scaled_y = (1.0 - location[1]) * mSvgSize;
 
+    // Calculate the lum value (for glyph colour)
+    unsigned col = 60 + static_cast<unsigned>(120.0 * fabs(0.5 - location[0]));
+
     double max_size = std::max(rad, rad * elongation);
 
-    (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
+    (*rSvgFile) << "<ellipse "
                 << "transform=\"translate(" << scaled_x << " " << scaled_y
                 << ") rotate(" << angle << ")\" "
                 << "rx=\"" << rad << "\" "
-                << "ry=\"" << elongation * rad << "\""
+                << "ry=\"" << elongation * rad << "\" "
+                << "fill=\"rgb(" << col << "," << col << "," << col << ")\""
                 << "/>"
                 << "\n";
 
     // Account for possible wrap-around of glyph in x
     if (scaled_x < max_size)
     {
-        (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
+        (*rSvgFile) << "<ellipse "
                     << "transform=\"translate(" << scaled_x + mSvgSize << " " << scaled_y
                     << ") rotate(" << angle << ")\" "
                     << "rx=\"" << rad << "\" "
-                    << "ry=\"" << elongation * rad << "\""
+                    << "ry=\"" << elongation * rad << "\" "
+                    << "fill=\"rgb(" << col << "," << col << "," << col << ")\""
                     << "/>"
                     << "\n";
     }
     else if (scaled_x > mSvgSize - max_size)
     {
-        (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
+        (*rSvgFile) << "<ellipse "
                     << "transform=\"translate(" << scaled_x - mSvgSize << " " << scaled_y
                     << ") rotate(" << angle << ")\" "
                     << "rx=\"" << rad << "\" "
-                    << "ry=\"" << elongation * rad << "\""
+                    << "ry=\"" << elongation * rad << "\" "
+                    << "fill=\"rgb(" << col << "," << col << "," << col << ")\""
                     << "/>"
                     << "\n";
     }
@@ -280,21 +276,23 @@ void GradualSvgWriter<DIM>::AddGlyphToSvgFile(out_stream& rSvgFile,
     // Account for possible wrap-around of glyph in y
     if (scaled_y < max_size)
     {
-        (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
+        (*rSvgFile) << "<ellipse "
                     << "transform=\"translate(" << scaled_x << " " << scaled_y + mSvgSize
                     << ") rotate(" << angle << ")\" "
                     << "rx=\"" << rad << "\" "
-                    << "ry=\"" << elongation * rad << "\""
+                    << "ry=\"" << elongation * rad << "\" "
+                    << "fill=\"rgb(" << col << "," << col << "," << col << ")\""
                     << "/>"
                     << "\n";
     }
     else if (scaled_y > mSvgSize - max_size)
     {
-        (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
+        (*rSvgFile) << "<ellipse "
                     << "transform=\"translate(" << scaled_x << " " << scaled_y - mSvgSize
                     << ") rotate(" << angle << ")\" "
                     << "rx=\"" << rad << "\" "
-                    << "ry=\"" << elongation * rad << "\""
+                    << "ry=\"" << elongation * rad << "\" "
+                    << "fill=\"rgb(" << col << "," << col << "," << col << ")\""
                     << "/>"
                     << "\n";
     }

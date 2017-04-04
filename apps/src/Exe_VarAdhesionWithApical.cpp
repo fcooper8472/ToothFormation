@@ -54,7 +54,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ThreeRegionInteractionForces.hpp"
 #include "TransitCellProliferativeType.hpp"
 #include "NoCellCycleModel.hpp"
-#include "ThreeRegionSvgWriter.hpp"
+#include "GradualSvgWriter.hpp"
 
 #include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
 #include "GradualChangeMorseMembraneForce.hpp"
@@ -196,7 +196,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     MAKE_PTR(ImmersedBoundarySimulationModifier<2>, p_main_modifier);
     simulator.AddSimulationModifier(p_main_modifier);
 
-    MAKE_PTR(ThreeRegionSvgWriter<2>, p_svg_writer);
+    MAKE_PTR(GradualSvgWriter<2>, p_svg_writer);
     simulator.AddSimulationModifier(p_svg_writer);
 
     MAKE_PTR(ApicalAndBasalTaggingModifier<2>, p_tagger);
