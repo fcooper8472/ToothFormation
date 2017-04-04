@@ -73,6 +73,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         unsigned furthest_right_idx = UNSIGNED_UNSET;
         unsigned furthest_left_idx = UNSIGNED_UNSET;
 
+        // First loop over every node.  Set initially as all apical, then tag correct nodes as basal
         for (unsigned node_idx = 0; node_idx < num_nodes_elem; ++node_idx)
         {
             // Get the current node, and determine whether it's on the left or right of the long axis
@@ -125,34 +126,44 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             }
         }
 
+        // Exception (for now) if no basal nodes were tagged in this element
         if (furthest_left_idx == UNSIGNED_UNSET || furthest_right_idx == UNSIGNED_UNSET)
         {
             EXCEPTION("Nothing near the basal lamina?");
         }
 
-        unsigned half_num_nodes = static_cast<unsigned>(0.5 * num_nodes_elem);
+        /*
+         * We now go counterclockwise from the furthest right, to identify the right lateral / periapical nodes
+         */
 
+        // If we investigate too many nodes, we have gone too far; this must mean there are no 'free' apical nodes
+        unsigned gone_too_far = static_cast<unsigned>(0.75 * num_nodes_elem);
+
+        // Define apical surface as a number of consecutive nodes that are not neighbours of nodes in other boundaries
         unsigned this_idx = furthest_right_idx;
         unsigned num_right_lat = 0;
         unsigned num_consecutive_misses = 0;
-        while (num_consecutive_misses < 5)
+        while (num_consecutive_misses < 10)
         {
+            this_idx = (this_idx + 1) % num_nodes_elem;
             num_consecutive_misses++;
             num_right_lat++;
 
+            // Avoid problems near the basal corners by always accepting the fist few nodes
             if (num_right_lat < 15)
             {
                 num_consecutive_misses = 0;
                 continue;
             }
 
-            if (num_right_lat == half_num_nodes)
+            // If we've gone too far, there's no apical surface, and we deal with the case separately
+            if (num_right_lat == gone_too_far)
             {
                 num_consecutive_misses = UNSIGNED_UNSET;
                 break;
             }
 
-            this_idx = (this_idx + 1) % num_nodes_elem;
+            // If we get to here, we actually have to check the node neighbours!
             Node<DIM>* p_this_node = elem_it->GetNode(this_idx);
 
             // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
@@ -174,6 +185,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             }
         }
 
+        // If we didn't go too far, tag the nodes
         if (num_consecutive_misses != UNSIGNED_UNSET)
         {
             num_right_lat -= num_consecutive_misses;
@@ -181,33 +193,40 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             unsigned num_lateral = static_cast<unsigned>(0.8 * num_right_lat);
             for (unsigned i = 0; i < num_right_lat; ++i)
             {
-                unsigned local_idx = (furthest_right_idx + i) % num_nodes_elem;
-                elem_it->GetNode(local_idx)->SetRegion(
-                        i <= num_lateral ? RIGHT_LATERAL_REGION : RIGHT_PERIAPICAL_REGION);
+                unsigned local_idx = (furthest_right_idx + 1 + i) % num_nodes_elem;
+                elem_it->GetNode(local_idx)->SetRegion(i <= num_lateral ? RIGHT_LATERAL_REGION : RIGHT_PERIAPICAL_REGION);
             }
         }
+
+
+        /*
+         * We now go clockwise from the furthest left basal node, to identify the left lateral / periapical nodes
+         */
 
         this_idx = furthest_left_idx;
         unsigned num_left_lat = 0;
         num_consecutive_misses = 0;
-        while (num_consecutive_misses < 5)
+        while (num_consecutive_misses < 10)
         {
+            this_idx = (this_idx + num_nodes_elem - 1) % num_nodes_elem;
             num_consecutive_misses++;
             num_left_lat++;
 
+            // Avoid problems near the basal corners by always accepting the fist few nodes
             if (num_left_lat < 15)
             {
                 num_consecutive_misses = 0;
                 continue;
             }
 
-            if (num_left_lat == half_num_nodes)
+            // If we've gone too far, there's no apical surface, and we deal with the case separately
+            if (num_left_lat == gone_too_far)
             {
                 num_consecutive_misses = UNSIGNED_UNSET;
                 break;
             }
 
-            this_idx = (this_idx + num_nodes_elem - 1) % num_nodes_elem;
+            // If we get to here, we actually have to check the node neighbours!
             Node<DIM>* p_this_node = elem_it->GetNode(this_idx);
 
             // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
@@ -229,24 +248,30 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             }
         }
 
-        if (num_consecutive_misses == UNSIGNED_UNSET)
-        {
-            for (unsigned i = furthest_right_idx + 1; i != furthest_left_idx; i = (i + 1) % num_nodes_elem )
-            {
-                Node<DIM>* p_this_node = elem_it->GetNode(i);
-                bool node_on_left = inner_prod(short_axis, p_mesh->GetVectorFromAtoB(centroid, p_this_node->rGetLocation())) < 0.0;
-                p_this_node->SetRegion(node_on_left ? LEFT_LATERAL_REGION : RIGHT_LATERAL_REGION);
-            }
-        }
-        else
+        // If we didn't go too far, tag the nodes
+        if (num_consecutive_misses != UNSIGNED_UNSET)
         {
             num_left_lat -= num_consecutive_misses;
 
             unsigned num_lateral = static_cast<unsigned>(0.8 * num_left_lat);
             for (unsigned i = 0; i < num_left_lat; ++i)
             {
-                unsigned local_idx = (furthest_left_idx + num_nodes_elem - i) % num_nodes_elem;
+                unsigned local_idx = (furthest_left_idx + num_nodes_elem - i - 1) % num_nodes_elem;
                 elem_it->GetNode(local_idx)->SetRegion(i <= num_lateral ? LEFT_LATERAL_REGION : LEFT_PERIAPICAL_REGION);
+            }
+        }
+        // If we did go too far, tag all non-basal nodes as left or right based on their orientation about the long axis
+        else
+        {
+            const c_vector<double, DIM> furthest_left = elem_it->GetNode(furthest_left_idx)->rGetLocation();
+            const c_vector<double, DIM> furthest_right = elem_it->GetNode(furthest_right_idx)->rGetLocation();
+            const c_vector<double, DIM> axis = p_mesh->GetVectorFromAtoB(furthest_left, furthest_right);
+
+            for (unsigned i = (furthest_right_idx + 1) % num_nodes_elem; i != furthest_left_idx; i = (i + 1) % num_nodes_elem )
+            {
+                Node<DIM>* p_this_node = elem_it->GetNode(i);
+                bool node_on_left = inner_prod(axis, p_mesh->GetVectorFromAtoB(centroid, p_this_node->rGetLocation())) < 0.0;
+                p_this_node->SetRegion(node_on_left ? LEFT_LATERAL_REGION : RIGHT_LATERAL_REGION);
             }
         }
     }
