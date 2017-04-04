@@ -36,7 +36,7 @@ if not(os.path.isfile(executable)):
 command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --TRL ', ' --TSC ', ' --AD ', ' --DI ', ' --SM ', ' --RM ',
                      ' --TS ', ' --AL ']
 params_list = ['simulation_id', 'cor_rest_length', 'cor_spring_const', 'tra_rest_length', 'tra_spring_const',
-               'adhesion_modifier', 'interaction_dist', 'stiffness_mult', 'remesh_frequency', 'num_time_steps'
+               'adhesion_modifier', 'interaction_dist', 'stiffness_mult', 'remesh_frequency', 'num_time_steps',
                'apical_lamina']
 
 # Time string when script is run, used for creating a unique archive name
@@ -49,7 +49,7 @@ trl = [1.0]
 tsc = [1e7]#np.linspace(5e7, 2e7, num=1)
 ad = [1.0]
 di = [0.02]
-sm = np.linspace(0.3, 0.5, num=1)
+sm = [0.4]
 rf = [50]
 ts = [10000]
 al = [True]

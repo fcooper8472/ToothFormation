@@ -24,8 +24,8 @@ except ImportError as e:
 chaste_build_dir = os.environ.get('CHASTE_BUILD_DIR')
 chaste_test_dir = os.environ.get('CHASTE_TEST_OUTPUT')
 
-executable = os.path.join(chaste_build_dir, 'projects/ToothFormation/apps', 'Exe_VarAdhesionWithApical')
-path_to_output = os.path.join(chaste_test_dir, 'tooth_formation', 'Exe_VarAdhesionWithApical')
+executable = os.path.join(chaste_build_dir, 'projects/ToothFormation/apps', 'Exe_BendingGradual')
+path_to_output = os.path.join(chaste_test_dir, 'tooth_formation', 'Exe_BendingGradual')
 path_to_sims = os.path.join(path_to_output, 'sim')
 path_to_movies = os.path.join(path_to_output, 'movies')
 
@@ -33,9 +33,11 @@ if not(os.path.isfile(executable)):
     quit('Py: Could not find executable: ' + executable)
 
 # List of command line arguments for the executable, and corresponding list of parameter names
-command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --TRL ', ' --TSC ', ' --AD ', ' --DI ', ' --SM ', ' --RM ', ' --TS ']
+command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --TRL ', ' --TSC ', ' --AD ', ' --DI ', ' --SM ', ' --RM ',
+                     ' --TS ', ' --AL ']
 params_list = ['simulation_id', 'cor_rest_length', 'cor_spring_const', 'tra_rest_length', 'tra_spring_const',
-               'adhesion_modifier', 'interaction_dist', 'stiffness_mult', 'remesh_frequency', 'num_time_steps']
+               'adhesion_modifier', 'interaction_dist', 'stiffness_mult', 'remesh_frequency', 'num_time_steps',
+               'apical_lamina']
 
 # Time string when script is run, used for creating a unique archive name
 today = time.strftime('%Y-%m-%dT%H%M')
@@ -50,9 +52,10 @@ di = [0.02]
 sm = [0.4]
 rf = [50]
 ts = [10000]
+al = [True]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
-combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, sm, rf, ts))
+combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, sm, rf, ts, al))
 
 
 def main():
