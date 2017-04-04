@@ -48,6 +48,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ImmersedBoundarySimulationModifier.hpp"
 #include "ImmersedBoundaryMorseInteractionForce.hpp"
 #include "ContactRegionTaggingModifier.hpp"
+#include "ApicalAndBasalTaggingModifier.hpp"
 #include "OffLatticeSimulation.hpp"
 #include "SmartPointers.hpp"
 #include "ThreeRegionInteractionForces.hpp"
@@ -170,7 +171,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
      * 5: Random y-variation
      * 6: Include membrane
      */
-    ImmersedBoundaryPalisadeMeshGenerator gen(15, 128, 0.1, 2.0, 0.0, true);
+    ImmersedBoundaryPalisadeMeshGenerator gen(15, 128, 0.1, 2.0, 0.0, true, true);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
     p_mesh->SetNumGridPtsXAndY(256);
@@ -199,7 +200,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     MAKE_PTR(ThreeRegionSvgWriter<2>, p_svg_writer);
     simulator.AddSimulationModifier(p_svg_writer);
 
-    MAKE_PTR(ContactRegionTaggingModifier<2>, p_tagger);
+    MAKE_PTR(ApicalAndBasalTaggingModifier<2>, p_tagger);
     simulator.AddSimulationModifier(p_tagger);
 
     // Add force laws
@@ -229,7 +230,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(UINT_MAX);
+    simulator.SetSamplingTimestepMultiple(1);
     simulator.SetEndTime(numTimeSteps * dt);
     p_svg_writer->SetSamplingMultiple(sampling_multiple);
 
