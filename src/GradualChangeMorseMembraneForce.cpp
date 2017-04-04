@@ -55,7 +55,7 @@ GradualChangeMorseMembraneForce<DIM>::~GradualChangeMorseMembraneForce()
 
 template <unsigned DIM>
 void GradualChangeMorseMembraneForce<DIM>::AddImmersedBoundaryForceContribution(std::vector<std::pair<Node<DIM>*, Node<DIM>*> >& rNodePairs,
-                                                                              ImmersedBoundaryCellPopulation<DIM>& rCellPopulation)
+                                                                                ImmersedBoundaryCellPopulation<DIM>& rCellPopulation)
 {
     // Data common across the entire cell population
     double intrinsicSpacingSquared = rCellPopulation.GetIntrinsicSpacing() * rCellPopulation.GetIntrinsicSpacing();
@@ -80,28 +80,27 @@ void GradualChangeMorseMembraneForce<DIM>::AddImmersedBoundaryForceContribution(
 template <unsigned DIM>
 template <unsigned ELEMENT_DIM>
 void GradualChangeMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoundaryElement<ELEMENT_DIM, DIM>& rElement,
-                                                                  ImmersedBoundaryCellPopulation<DIM>& rCellPopulation,
-                                                                  double intrinsicSpacingSquared)
+                                                                    ImmersedBoundaryCellPopulation<DIM>& rCellPopulation,
+                                                                    double intrinsicSpacingSquared)
 {
+    if (rCellPopulation.GetNumElements() % 2 != 1)
+    {
+        EXCEPTION("This force class assumes there are an odd number of elements");
+    }
+
     // Get index and number of nodes of current element
     unsigned elem_idx = rElement.GetIndex();
     unsigned num_nodes = rElement.GetNumNodes();
+    unsigned num_elems = rCellPopulation.rGetMesh().GetNumElements();
+    unsigned middle_idx = (num_elems - 1) / 2;
 
-    unsigned elem_region = 0;
-    assert(rCellPopulation.GetNumElements() % 3 == 0);
-    if (rElement.GetIndex() >= rCellPopulation.GetNumElements() / 3)
+    // Calculate the stiffness mult that applies to specific regions of elements
+    double stiffness_mult = 1.0;
+    if (ELEMENT_DIM == DIM)
     {
-        elem_region = 1;
+        double proportion_to_edge = fabs(elem_idx - static_cast<double>(middle_idx)) / static_cast<double>(middle_idx);
+        stiffness_mult = 1.0 + proportion_to_edge * (mStiffnessMult - 1.0);
     }
-    if (rElement.GetIndex() >= 2 * (rCellPopulation.GetNumElements() / 3))
-    {
-        elem_region = 2;
-    }
-    if (ELEMENT_DIM != DIM)
-    {
-        elem_region = 3;
-    }
-
 
     // Make a vector to store the force on node i+1 from node i
     std::vector<c_vector<double, DIM> > force_to_next(num_nodes);
@@ -154,7 +153,7 @@ void GradualChangeMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoun
         unsigned next_idx = (node_idx + 1) % num_nodes;
 
         // If element rather than lamina, calculate the stuffness multiplier
-        double stiffness_mult = CalculateStiffnessMult(elem_region, rElement.GetNode(node_idx)->GetRegion());
+        double multiplier = UseStiffnessMult(elem_idx, middle_idx, rElement.GetNode(node_idx)->GetRegion()) ? stiffness_mult : 1.0;
 
         // Morse force (derivative of Morse potential wrt distance between nodes
         force_to_next[node_idx] = rCellPopulation.rGetMesh().GetVectorFromAtoB(rElement.GetNodeLocation(node_idx),
@@ -162,7 +161,7 @@ void GradualChangeMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoun
         double normed_dist = norm_2(force_to_next[node_idx]);
 
         double morse_exp = exp((rest_length - normed_dist) / well_width);
-        force_to_next[node_idx] *= 2.0 * well_width * well_depth * stiffness_mult * morse_exp * (1.0 - morse_exp) / normed_dist;
+        force_to_next[node_idx] *= 2.0 * well_width * well_depth * multiplier * morse_exp * (1.0 - morse_exp) / normed_dist;
     }
 
     // Add the contributions of springs adjacent to each node
@@ -178,29 +177,27 @@ void GradualChangeMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoun
     }
 }
 
-template<unsigned DIM>
-double GradualChangeMorseMembraneForce<DIM>::CalculateStiffnessMult(unsigned elem_region, unsigned node_region)
+template <unsigned DIM>
+bool GradualChangeMorseMembraneForce<DIM>::UseStiffnessMult(unsigned elemIdx, unsigned middleIdx, unsigned nodeRegion)
 {
-    double stiffness_mult = 1.0;
-
     // Left
-    if (elem_region == 0)
+    if (elemIdx < middleIdx)
     {
-        if (node_region == RIGHT_APICAL_REGION || node_region == RIGHT_PERIAPICAL_REGION)
+        if (nodeRegion == RIGHT_APICAL_REGION || nodeRegion == RIGHT_PERIAPICAL_REGION)
         {
-            stiffness_mult = mStiffnessMult;
+            return true;
         }
     }
     // Right
-    else if (elem_region == 2)
+    else if (elemIdx > middleIdx)
     {
-        if (node_region == LEFT_APICAL_REGION || node_region == LEFT_PERIAPICAL_REGION)
+        if (nodeRegion == LEFT_APICAL_REGION || nodeRegion == LEFT_PERIAPICAL_REGION)
         {
-            stiffness_mult = mStiffnessMult;
+            return true;
         }
     }
 
-    return  stiffness_mult;
+    return false;
 }
 
 template <unsigned DIM>

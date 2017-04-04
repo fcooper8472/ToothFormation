@@ -92,11 +92,12 @@ private:
     /**
      * Helper method for CalculateForcesOnElement().
      * Determine whether to modify stiffness, based on the elem region and node region.
-     * @param elem_region the elem region (left, centre, right, membrane)
-     * @param node_region the node region (RIGHT_APICAL, RIGHT_BASAL, etc)
-     * @return the stiffness multiplier altering interaction properties
+     * @param elemIdx the index of the current element
+     * @param middleIdx the index of the middle element
+     * @param nodeRegion the node region (RIGHT_APICAL, RIGHT_BASAL, etc)
+     * @return whether to apply the stiffness multiplier
      */
-    double CalculateStiffnessMult(unsigned elem_region, unsigned node_region);
+    bool UseStiffnessMult(unsigned elemIdx, unsigned middleIdx, unsigned nodeRegion);
 
     /**
      * Helper method for AddImmersedBoundaryForceContribution.
