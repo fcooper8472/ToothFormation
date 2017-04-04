@@ -57,7 +57,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ThreeRegionSvgWriter.hpp"
 
 #include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
-#include "VarAdhesionMorseMembraneForce.hpp"
+#include "GradualChangeMorseMembraneForce.hpp"
 
 #include <boost/make_shared.hpp>
 #include "ForwardEulerNumericalMethod.hpp"
@@ -66,7 +66,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
-#include <mesh/src/immersed_boundary/ImmersedBoundaryPalisadeMeshGenerator.hpp>
 
 /*
  * Prototype functions
@@ -204,7 +203,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     simulator.AddSimulationModifier(p_tagger);
 
     // Add force laws
-    MAKE_PTR(VarAdhesionMorseMembraneForce<2>, p_boundary_force);
+    MAKE_PTR(GradualChangeMorseMembraneForce<2>, p_boundary_force);
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
     p_boundary_force->SetElementWellDepth(corSpringConst);
     p_boundary_force->SetElementRestLength(corRestLength);

@@ -47,7 +47,7 @@ trl = [1.0]
 tsc = [1e7]#np.linspace(5e7, 2e7, num=1)
 ad = [1.0]
 di = [0.02]
-sm = np.linspace(0.3, 0.5, num=1)
+sm = [0.4]
 rf = [50]
 ts = [10000]
 
