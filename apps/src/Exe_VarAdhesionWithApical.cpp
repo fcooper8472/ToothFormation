@@ -230,7 +230,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(1);
+    simulator.SetSamplingTimestepMultiple(UINT_MAX);
     simulator.SetEndTime(numTimeSteps * dt);
     p_svg_writer->SetSamplingMultiple(sampling_multiple);
 
