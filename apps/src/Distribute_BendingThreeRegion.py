@@ -52,7 +52,7 @@ di = [0.02]
 sm = [0.4]
 rf = [50]
 ts = [10000]
-al = [True]
+al = [True, False]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
 combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, sm, rf, ts, al))
