@@ -130,7 +130,6 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         if (furthest_left_idx == UNSIGNED_UNSET || furthest_right_idx == UNSIGNED_UNSET)
         {
             unsigned lowest_idx = 0;
-            Node<DIM>* p_lowest_node = elem_it->GetNode(0);
 
             for (unsigned node_idx = 1; node_idx < num_nodes_elem; ++node_idx)
             {
