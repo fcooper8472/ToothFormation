@@ -126,10 +126,22 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             }
         }
 
-        // Exception (for now) if no basal nodes were tagged in this element
+        // Use the lowest y-valued node as furthest_left_idx and furthest_right_idx if no basal nodes were identified
         if (furthest_left_idx == UNSIGNED_UNSET || furthest_right_idx == UNSIGNED_UNSET)
         {
-            EXCEPTION("Nothing near the basal lamina?");
+            unsigned lowest_idx = 0;
+            Node<DIM>* p_lowest_node = elem_it->GetNode(0);
+
+            for (unsigned node_idx = 1; node_idx < num_nodes_elem; ++node_idx)
+            {
+                if (elem_it->GetNode(node_idx)->rGetLocation()[1] < elem_it->GetNode(lowest_idx)->rGetLocation()[1])
+                {
+                    lowest_idx = node_idx;
+                }
+            }
+
+            furthest_left_idx = lowest_idx;
+            furthest_right_idx = lowest_idx;
         }
 
         /*
@@ -198,7 +210,6 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             }
         }
 
-
         /*
          * We now go clockwise from the furthest left basal node, to identify the left lateral / periapical nodes
          */
@@ -263,11 +274,22 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         // If we did go too far, tag all non-basal nodes as left or right based on their orientation about the long axis
         else
         {
-            const c_vector<double, DIM> furthest_left = elem_it->GetNode(furthest_left_idx)->rGetLocation();
-            const c_vector<double, DIM> furthest_right = elem_it->GetNode(furthest_right_idx)->rGetLocation();
-            const c_vector<double, DIM> axis = p_mesh->GetVectorFromAtoB(furthest_left, furthest_right);
+            c_vector<double, DIM> axis;
 
-            for (unsigned i = (furthest_right_idx + 1) % num_nodes_elem; i != furthest_left_idx; i = (i + 1) % num_nodes_elem )
+            // If there were no basal nodes tagged, we just use the short axis.
+            if (furthest_left_idx == furthest_right_idx)
+            {
+                axis = short_axis;
+            }
+            // Else, generate an axis based on the basal nodes (more robust to odd cell shapes).
+            else
+            {
+                const c_vector<double, DIM> furthest_left = elem_it->GetNode(furthest_left_idx)->rGetLocation();
+                const c_vector<double, DIM> furthest_right = elem_it->GetNode(furthest_right_idx)->rGetLocation();
+                axis = p_mesh->GetVectorFromAtoB(furthest_left, furthest_right);
+            }
+
+            for (unsigned i = (furthest_right_idx + 1) % num_nodes_elem; i != furthest_left_idx; i = (i + 1) % num_nodes_elem)
             {
                 Node<DIM>* p_this_node = elem_it->GetNode(i);
                 bool node_on_left = inner_prod(axis, p_mesh->GetVectorFromAtoB(centroid, p_this_node->rGetLocation())) < 0.0;
