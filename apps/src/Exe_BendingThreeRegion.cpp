@@ -35,28 +35,28 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cxxtest/TestSuite.h>
 
+#include "AdditiveNormalLocationModifier.hpp"
+#include "ApicalAndBasalTaggingModifier.hpp"
 #include "CellId.hpp"
 #include "CellRegionWriter.hpp"
 #include "CellsGenerator.hpp"
 #include "CellsGenerator.hpp"
 #include "CheckpointArchiveTypes.hpp"
+#include "ContactRegionTaggingModifier.hpp"
+#include "DifferentiatedCellProliferativeType.hpp"
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "ExecutableSupport.hpp"
-#include "DifferentiatedCellProliferativeType.hpp"
 #include "FluidSource.hpp"
 #include "ImmersedBoundaryMesh.hpp"
-#include "ImmersedBoundarySimulationModifier.hpp"
 #include "ImmersedBoundaryMorseInteractionForce.hpp"
-#include "ContactRegionTaggingModifier.hpp"
-#include "ApicalAndBasalTaggingModifier.hpp"
+#include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
+#include "ImmersedBoundarySimulationModifier.hpp"
+#include "NoCellCycleModel.hpp"
 #include "OffLatticeSimulation.hpp"
 #include "SmartPointers.hpp"
 #include "ThreeRegionInteractionForces.hpp"
-#include "TransitCellProliferativeType.hpp"
-#include "NoCellCycleModel.hpp"
 #include "ThreeRegionSvgWriter.hpp"
-#include "AdditiveNormalLocationModifier.hpp"
-#include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
+#include "TransitCellProliferativeType.hpp"
 #include "VarAdhesionMorseMembraneForce.hpp"
 
 #include <boost/make_shared.hpp>
@@ -64,8 +64,8 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Program option includes for handling command line arguments
 #include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
 #include <mesh/src/immersed_boundary/ImmersedBoundaryPalisadeMeshGenerator.hpp>
 
 /*
@@ -78,7 +78,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
                            unsigned reMeshFreq, unsigned numTimeSteps, bool apicalLamina);
 void OutputToConsole(std::string idString, std::string leading);
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // This sets up PETSc and prints out copyright information, etc.
     ExecutableSupport::StartupWithoutShowingCopyright(&argc, &argv);
@@ -257,7 +257,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     double max_y = 0.0;
     double min_y = 1.0;
 
-    for (unsigned node_idx = 0 ; node_idx < p_mesh->GetLamina(0)->GetNumNodes(); node_idx++)
+    for (unsigned node_idx = 0; node_idx < p_mesh->GetLamina(0)->GetNumNodes(); node_idx++)
     {
         double this_y = p_mesh->GetLamina(0)->GetNode(node_idx)->rGetLocation()[1];
 
@@ -275,13 +275,13 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     out_stream results_file = results_handler.OpenOutputFile("results.csv");
 
     // Output summary statistics to results file
-    (*results_file) << "id" << ","
-                    << "max_y_var" << ","
+    (*results_file) << "id,"
+                    << "max_y_var,"
                     << "asymmetry_measure" << std::endl;
 
     (*results_file) << idString << ","
                     << boost::lexical_cast<std::string>(max_y - min_y) << ","
-                    << p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(4, unit_vector<double>(2,0));
+                    << p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(4, unit_vector<double>(2, 0));
 
     // Tidy up
     results_file->close();
