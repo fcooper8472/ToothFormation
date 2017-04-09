@@ -35,7 +35,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cxxtest/TestSuite.h>
 
-#include "AdditiveNormalLocationModifier.hpp"
 #include "ApicalAndBasalTaggingModifier.hpp"
 #include "CellId.hpp"
 #include "CellRegionWriter.hpp"
@@ -196,11 +195,6 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2, 2> >());
     simulator.GetNumericalMethod()->SetUseUpdateNodeLocation(true);
 
-    // Add normal location modifier first, so it happens before force calculation
-    MAKE_PTR(AdditiveNormalLocationModifier<2>, p_noise);
-    p_noise->SetStdDev(0.25 * p_mesh->GetCharacteristicNodeSpacing());
-    simulator.AddSimulationModifier(p_noise);
-
     // Add main immersed boundary simulation modifier
     MAKE_PTR(ImmersedBoundarySimulationModifier<2>, p_main_modifier);
     simulator.AddSimulationModifier(p_main_modifier);
@@ -227,6 +221,9 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_boundary_force->SetLaminaWellDepth(2.0 * corSpringConst);
     p_boundary_force->SetLaminaRestLength(corRestLength);
     p_boundary_force->SetStiffnessMult(stiffnessMult);
+    p_boundary_force->SetMultiplicativeNormalNoise(true);
+    p_boundary_force->SetNormalNoiseMean(1.0);
+    p_boundary_force->SetNormalNoiseStdDev(0.1 * p_mesh->GetCharacteristicNodeSpacing());
 
     MAKE_PTR(ImmersedBoundaryMorseInteractionForce<2>, p_cell_cell_force);
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);

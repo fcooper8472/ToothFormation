@@ -52,7 +52,7 @@ di = [0.02]
 sm = np.linspace(0.6, 0.9, num=4)
 rf = [50]
 ts = [16000]
-al = [True, False]
+al = [True]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
 combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, sm, rf, ts, al))

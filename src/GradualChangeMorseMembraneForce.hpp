@@ -89,6 +89,15 @@ private:
     /** The multiplicative factor to change the well depth by for particular nodes */
     double mStiffnessMult;
 
+    /** Whether to apply multiplicative normal noise to the calculated force */
+    bool mMultiplicativeNormalNoise;
+
+    /** The mean of the Normal distribution from which random noise variations are drawn */
+    double mNormalNoiseMean;
+
+    /** The standard deviation of the Normal distribution from which random noise variations are drawn */
+    double mNormalNoiseStdDev;
+
     /**
      * Helper method for CalculateForcesOnElement().
      * Determine whether to modify stiffness, based on the elem region and node region.
@@ -170,6 +179,24 @@ public:
 
     /** @param stiffnessMult the new value of mStiffnessMult */
     void SetStiffnessMult(double stiffnessMult);
+
+    /** @return mMultiplicativeNormalNoise */
+    bool GetMultiplicativeNormalNoise() const;
+
+    /** @param multiplicativeNormalNoise whether to include multiplicative normal noise */
+    void SetMultiplicativeNormalNoise(bool multiplicativeNormalNoise);
+
+    /** @return mNormalNoiseMean */
+    double GetNormalNoiseMean() const;
+
+    /** @param normalNoiseMean the new value of mNormalNoiseMean */
+    void SetNormalNoiseMean(double normalNoiseMean);
+
+    /** @return mNormalNoiseStdDev */
+    double GetNormalNoiseStdDev() const;
+
+    /** @param normalNoiseStdDev the new value of mNormalNoiseStdDev */
+    void SetNormalNoiseStdDev(double normalNoiseStdDev);
 };
 
 #include "SerializationExportWrapper.hpp"
