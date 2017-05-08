@@ -221,9 +221,6 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_boundary_force->SetLaminaWellDepth(2.0 * corSpringConst);
     p_boundary_force->SetLaminaRestLength(corRestLength);
     p_boundary_force->SetStiffnessMult(stiffnessMult);
-    p_boundary_force->SetMultiplicativeNormalNoise(true);
-    p_boundary_force->SetNormalNoiseMean(1.0);
-    p_boundary_force->SetNormalNoiseStdDev(0.1 * p_mesh->GetCharacteristicNodeSpacing());
 
     MAKE_PTR(ImmersedBoundaryMorseInteractionForce<2>, p_cell_cell_force);
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
@@ -231,6 +228,9 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_cell_cell_force->SetRestLength(0.25 * interactionDist * traRestLength);
     p_cell_cell_force->SetLaminaRestLengthMult(0.5);
     p_cell_cell_force->SetLaminaWellDepthMult(2.0);
+    p_cell_cell_force->SetMultiplicativeNormalNoise(true);
+    p_cell_cell_force->SetNormalNoiseMean(0.0);
+    p_cell_cell_force->SetNormalNoiseStdDev(5.0);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;

@@ -45,10 +45,7 @@ GradualChangeMorseMembraneForce<DIM>::GradualChangeMorseMembraneForce()
           mLaminaWellDepth(1e6),
           mLaminaRestLength(0.5),
           mWellWidth(0.25),
-          mStiffnessMult(1.0),
-          mMultiplicativeNormalNoise(false),
-          mNormalNoiseMean(1.0),
-          mNormalNoiseStdDev(0.0)
+          mStiffnessMult(1.0)
 {
 }
 
@@ -79,6 +76,11 @@ void GradualChangeMorseMembraneForce<DIM>::AddImmersedBoundaryForceContribution(
     {
         CalculateForcesOnElement(*lam_it, rCellPopulation, intrinsicSpacingSquared);
     }
+
+    if (this->mMultiplicativeNormalNoise)
+    {
+        this->AddMultiplicativeNormalNoiseToNodes(rCellPopulation);
+    }
 }
 
 template <unsigned DIM>
@@ -99,8 +101,7 @@ void GradualChangeMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoun
     unsigned middle_idx = (num_elems - 1) / 2;
 
     // If we need to generate random numbers, create a random number generator
-    RandomNumberGenerator* p_gen = mMultiplicativeNormalNoise ? RandomNumberGenerator::Instance() : NULL;
-
+    RandomNumberGenerator* p_gen = this->mMultiplicativeNormalNoise ? RandomNumberGenerator::Instance() : NULL;
     // Calculate the stiffness mult that applies to specific regions of elements
     double stiffness_mult = 1.0;
     if (ELEMENT_DIM == DIM)
@@ -169,12 +170,6 @@ void GradualChangeMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoun
 
         double morse_exp = exp((rest_length - normed_dist) / well_width);
         force_to_next[node_idx] *= 2.0 * well_width * well_depth * multiplier * morse_exp * (1.0 - morse_exp) / normed_dist;
-
-        if (mMultiplicativeNormalNoise)
-        {
-            force_to_next[node_idx][0] *= p_gen->NormalRandomDeviate(mNormalNoiseMean, mNormalNoiseStdDev);
-            force_to_next[node_idx][1] *= p_gen->NormalRandomDeviate(mNormalNoiseMean, mNormalNoiseStdDev);
-        }
     }
 
     // Add the contributions of springs adjacent to each node
@@ -184,6 +179,12 @@ void GradualChangeMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoun
         unsigned prev_idx = (node_idx + num_nodes - 1) % num_nodes;
 
         c_vector<double, DIM> aggregate_force = force_to_next[node_idx] - force_to_next[prev_idx];
+
+//        if (this->mMultiplicativeNormalNoise)
+//        {
+//            aggregate_force[0] *= p_gen->NormalRandomDeviate(this->mNormalNoiseMean, this->mNormalNoiseStdDev);
+//            aggregate_force[1] *= p_gen->NormalRandomDeviate(this->mNormalNoiseMean, this->mNormalNoiseStdDev);
+//        }
 
         // Add the aggregate force contribution to the node
         rElement.GetNode(node_idx)->AddAppliedForceContribution(aggregate_force);
@@ -296,42 +297,6 @@ template <unsigned DIM>
 void GradualChangeMorseMembraneForce<DIM>::SetStiffnessMult(double stiffnessMult)
 {
     mStiffnessMult = stiffnessMult;
-}
-
-template <unsigned DIM>
-bool GradualChangeMorseMembraneForce<DIM>::GetMultiplicativeNormalNoise() const
-{
-    return mMultiplicativeNormalNoise;
-}
-
-template <unsigned DIM>
-void GradualChangeMorseMembraneForce<DIM>::SetMultiplicativeNormalNoise(bool multiplicativeNormalNoise)
-{
-    mMultiplicativeNormalNoise = multiplicativeNormalNoise;
-}
-
-template <unsigned DIM>
-double GradualChangeMorseMembraneForce<DIM>::GetNormalNoiseMean() const
-{
-    return mNormalNoiseMean;
-}
-
-template <unsigned DIM>
-void GradualChangeMorseMembraneForce<DIM>::SetNormalNoiseMean(double normalNoiseMean)
-{
-    mNormalNoiseMean = normalNoiseMean;
-}
-
-template <unsigned DIM>
-double GradualChangeMorseMembraneForce<DIM>::GetNormalNoiseStdDev() const
-{
-    return mNormalNoiseStdDev;
-}
-
-template <unsigned DIM>
-void GradualChangeMorseMembraneForce<DIM>::SetNormalNoiseStdDev(double normalNoiseStdDev)
-{
-    mNormalNoiseStdDev = normalNoiseStdDev;
 }
 
 // Explicit instantiation
