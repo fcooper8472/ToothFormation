@@ -77,9 +77,9 @@ void GradualChangeMorseMembraneForce<DIM>::AddImmersedBoundaryForceContribution(
         CalculateForcesOnElement(*lam_it, rCellPopulation, intrinsicSpacingSquared);
     }
 
-    if (this->mMultiplicativeNormalNoise)
+    if (this->mAdditiveNormalNoise)
     {
-        this->AddMultiplicativeNormalNoiseToNodes(rCellPopulation);
+        this->AddNormalNoiseToNodes(rCellPopulation);
     }
 }
 
@@ -101,7 +101,7 @@ void GradualChangeMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoun
     unsigned middle_idx = (num_elems - 1) / 2;
 
     // If we need to generate random numbers, create a random number generator
-    RandomNumberGenerator* p_gen = this->mMultiplicativeNormalNoise ? RandomNumberGenerator::Instance() : NULL;
+    RandomNumberGenerator* p_gen = this->mAdditiveNormalNoise ? RandomNumberGenerator::Instance() : NULL;
     // Calculate the stiffness mult that applies to specific regions of elements
     double stiffness_mult = 1.0;
     if (ELEMENT_DIM == DIM)
@@ -179,12 +179,6 @@ void GradualChangeMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoun
         unsigned prev_idx = (node_idx + num_nodes - 1) % num_nodes;
 
         c_vector<double, DIM> aggregate_force = force_to_next[node_idx] - force_to_next[prev_idx];
-
-//        if (this->mMultiplicativeNormalNoise)
-//        {
-//            aggregate_force[0] *= p_gen->NormalRandomDeviate(this->mNormalNoiseMean, this->mNormalNoiseStdDev);
-//            aggregate_force[1] *= p_gen->NormalRandomDeviate(this->mNormalNoiseMean, this->mNormalNoiseStdDev);
-//        }
 
         // Add the aggregate force contribution to the node
         rElement.GetNode(node_idx)->AddAppliedForceContribution(aggregate_force);

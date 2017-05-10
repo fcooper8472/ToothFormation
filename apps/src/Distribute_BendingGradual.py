@@ -49,7 +49,7 @@ trl = [1.0]
 tsc = [1e7]#np.linspace(5e7, 2e7, num=1)
 ad = [1.0]
 di = [0.02]
-sm = [0.6]#np.linspace(0.6, 0.9, num=4)
+sm = [0.2]#np.linspace(0.6, 0.9, num=4)
 rf = [50]
 ts = [1000]
 al = [True]
