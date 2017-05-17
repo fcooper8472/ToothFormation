@@ -172,11 +172,11 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
      * 5: Random y-variation
      * 6: Include basal lamina
      * 7: Include apical lamina
+     * 8: Use a leaky lamina
+     * 9: Num fluid mesh points: overrides nodes per cell
      */
-    ImmersedBoundaryPalisadeMeshGenerator gen(15, 128, 0.1, 2.0, 0.0, true, apicalLamina);
+    ImmersedBoundaryPalisadeMeshGenerator gen(15u, 128u, 0.1, 2.0, 0.0, true, apicalLamina, true, 256u);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
-
-    p_mesh->SetNumGridPtsXAndY(256);
 
     std::cout << p_mesh->GetSpacingRatio() << std::endl;
 

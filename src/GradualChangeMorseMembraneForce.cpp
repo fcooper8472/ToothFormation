@@ -62,7 +62,7 @@ void GradualChangeMorseMembraneForce<DIM>::AddImmersedBoundaryForceContribution(
     double intrinsicSpacingSquared = rCellPopulation.GetIntrinsicSpacing() * rCellPopulation.GetIntrinsicSpacing();
 
     // Loop over all elements ( <DIM, DIM> )
-    for (typename ImmersedBoundaryMesh<DIM, DIM>::ImmersedBoundaryElementIterator elem_it = rCellPopulation.rGetMesh().GetElementIteratorBegin();
+    for (auto elem_it = rCellPopulation.rGetMesh().GetElementIteratorBegin();
          elem_it != rCellPopulation.rGetMesh().GetElementIteratorEnd();
          ++elem_it)
     {
@@ -70,7 +70,7 @@ void GradualChangeMorseMembraneForce<DIM>::AddImmersedBoundaryForceContribution(
     }
 
     // Loop over all laminas ( <DIM-1, DIM> )
-    for (typename ImmersedBoundaryMesh<DIM, DIM>::ImmersedBoundaryLaminaIterator lam_it = rCellPopulation.rGetMesh().GetLaminaIteratorBegin();
+    for (auto lam_it = rCellPopulation.rGetMesh().GetLaminaIteratorBegin();
          lam_it != rCellPopulation.rGetMesh().GetLaminaIteratorEnd();
          ++lam_it)
     {
