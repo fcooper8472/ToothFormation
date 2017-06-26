@@ -142,7 +142,7 @@ void GradualChangeMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoun
         // \todo Remove this hack for reducing apical lamina stiffness
         if (rElement.GetIndex() == 1)
         {
-            well_depth *= 0.25;
+            well_depth *= 0.1;
         }
     }
     else // regular element
@@ -191,7 +191,7 @@ bool GradualChangeMorseMembraneForce<DIM>::UseStiffnessMult(unsigned elemIdx, un
     // Left
     if (elemIdx < middleIdx)
     {
-        if (nodeRegion == RIGHT_APICAL_REGION || nodeRegion == RIGHT_PERIAPICAL_REGION)
+        if (nodeRegion == RIGHT_APICAL_REGION)// || nodeRegion == RIGHT_PERIAPICAL_REGION)
         {
             return true;
         }
@@ -199,7 +199,7 @@ bool GradualChangeMorseMembraneForce<DIM>::UseStiffnessMult(unsigned elemIdx, un
     // Right
     else if (elemIdx > middleIdx)
     {
-        if (nodeRegion == LEFT_APICAL_REGION || nodeRegion == LEFT_PERIAPICAL_REGION)
+        if (nodeRegion == LEFT_APICAL_REGION)// || nodeRegion == LEFT_PERIAPICAL_REGION)
         {
             return true;
         }

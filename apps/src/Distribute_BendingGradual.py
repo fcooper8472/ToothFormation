@@ -48,10 +48,10 @@ csc = [1e8]
 trl = [1.0]
 tsc = [1e7]#np.linspace(5e7, 2e7, num=1)
 ad = [1.0]
-di = [0.02]
+di = [0.02]#np.linspace(0.02, 0.04, num=5)
 sm = [0.1]#np.linspace(0.6, 0.9, num=4)
 rf = [50]
-ts = [50]
+ts = [10000]
 al = [True]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
