@@ -196,11 +196,6 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2, 2> >());
     simulator.GetNumericalMethod()->SetUseUpdateNodeLocation(true);
 
-    // Add normal location modifier first, so it happens before force calculation
-    MAKE_PTR(AdditiveNormalLocationModifier<2>, p_noise);
-    p_noise->SetStdDev(0.25 * p_mesh->GetCharacteristicNodeSpacing());
-    simulator.AddSimulationModifier(p_noise);
-
     // Add main immersed boundary simulation modifier
     MAKE_PTR(ImmersedBoundarySimulationModifier<2>, p_main_modifier);
     simulator.AddSimulationModifier(p_main_modifier);
@@ -234,6 +229,9 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_cell_cell_force->SetRestLength(0.25 * interactionDist * traRestLength);
     p_cell_cell_force->SetLaminaRestLengthMult(0.5);
     p_cell_cell_force->SetLaminaWellDepthMult(2.0);
+    p_cell_cell_force->SetAdditiveNormalNoise(true);
+    p_cell_cell_force->SetNormalNoiseMean(0.0);
+    p_cell_cell_force->SetNormalNoiseStdDev(0.2);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
