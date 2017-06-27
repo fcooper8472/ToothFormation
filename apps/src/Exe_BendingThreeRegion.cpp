@@ -227,7 +227,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
     p_cell_cell_force->SetWellDepth(traSpringConst);
     p_cell_cell_force->SetRestLength(0.25 * interactionDist * traRestLength);
-    p_cell_cell_force->SetLaminaRestLengthMult(0.5);
+    p_cell_cell_force->SetLaminaRestLengthMult(2.0);
     p_cell_cell_force->SetLaminaWellDepthMult(2.0);
     p_cell_cell_force->SetAdditiveNormalNoise(true);
     p_cell_cell_force->SetNormalNoiseMean(0.0);

@@ -49,6 +49,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "GradualChangeMorseMembraneForce.hpp"
 #include "GradualSvgWriter.hpp"
 #include "ImmersedBoundaryMesh.hpp"
+#include "ImmersedBoundaryMorseMembraneForce.hpp"
 #include "ImmersedBoundaryMorseInteractionForce.hpp"
 #include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
@@ -214,6 +215,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     }
 
     // Add force laws
+//    MAKE_PTR(ImmersedBoundaryMorseMembraneForce<2>, p_boundary_force);
     MAKE_PTR(GradualChangeMorseMembraneForce<2>, p_boundary_force);
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
     p_boundary_force->SetElementWellDepth(corSpringConst);
@@ -230,7 +232,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_cell_cell_force->SetLaminaWellDepthMult(2.0);
     p_cell_cell_force->SetAdditiveNormalNoise(true);
     p_cell_cell_force->SetNormalNoiseMean(0.0);
-    p_cell_cell_force->SetNormalNoiseStdDev(0.2);
+    p_cell_cell_force->SetNormalNoiseStdDev(0.08);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
