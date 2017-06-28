@@ -40,6 +40,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CellRegionWriter.hpp"
 #include "CellsGenerator.hpp"
 #include "CellsGenerator.hpp"
+#include "ChasteMakeUnique.hpp"
 #include "CheckpointArchiveTypes.hpp"
 #include "ContactRegionTaggingModifier.hpp"
 #include "DifferentiatedCellProliferativeType.hpp"
@@ -52,7 +53,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ImmersedBoundarySimulationModifier.hpp"
 #include "NoCellCycleModel.hpp"
 #include "OffLatticeSimulation.hpp"
-#include "SmartPointers.hpp"
 #include "ThreeRegionInteractionForces.hpp"
 #include "ThreeRegionSvgWriter.hpp"
 #include "TransitCellProliferativeType.hpp"
@@ -193,29 +193,27 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     cell_population.SetOutputNodeRegionToVtk(true);
 
     OffLatticeSimulation<2> simulator(cell_population);
-    simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2, 2> >());
+    simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2, 2>>());
     simulator.GetNumericalMethod()->SetUseUpdateNodeLocation(true);
 
     // Add main immersed boundary simulation modifier
-    MAKE_PTR(ImmersedBoundarySimulationModifier<2>, p_main_modifier);
+    auto p_main_modifier = boost::make_shared<ImmersedBoundarySimulationModifier<2>>();
     simulator.AddSimulationModifier(p_main_modifier);
 
-    MAKE_PTR(ThreeRegionSvgWriter<2>, p_svg_writer);
+    auto p_svg_writer = boost::make_shared<ThreeRegionSvgWriter<2>>();
     simulator.AddSimulationModifier(p_svg_writer);
 
     if (apicalLamina)
     {
-        MAKE_PTR(ApicalAndBasalTaggingModifier<2>, p_tagger);
-        simulator.AddSimulationModifier(p_tagger);
+        simulator.AddSimulationModifier(boost::make_shared<ApicalAndBasalTaggingModifier<2>>());
     }
     else
     {
-        MAKE_PTR(ContactRegionTaggingModifier<2>, p_tagger);
-        simulator.AddSimulationModifier(p_tagger);
+        simulator.AddSimulationModifier(boost::make_shared<ContactRegionTaggingModifier<2>>());
     }
 
     // Add force laws
-    MAKE_PTR(VarAdhesionMorseMembraneForce<2>, p_boundary_force);
+    auto p_boundary_force = boost::make_shared<VarAdhesionMorseMembraneForce<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
     p_boundary_force->SetElementWellDepth(corSpringConst);
     p_boundary_force->SetElementRestLength(corRestLength);
@@ -223,7 +221,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_boundary_force->SetLaminaRestLength(corRestLength);
     p_boundary_force->SetStiffnessMult(stiffnessMult);
 
-    MAKE_PTR(ImmersedBoundaryMorseInteractionForce<2>, p_cell_cell_force);
+    auto p_cell_cell_force = boost::make_shared<ImmersedBoundaryMorseInteractionForce<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
     p_cell_cell_force->SetWellDepth(traSpringConst);
     p_cell_cell_force->SetRestLength(0.25 * interactionDist * traRestLength);
@@ -231,7 +229,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_cell_cell_force->SetLaminaWellDepthMult(2.0);
     p_cell_cell_force->SetAdditiveNormalNoise(true);
     p_cell_cell_force->SetNormalNoiseMean(0.0);
-    p_cell_cell_force->SetNormalNoiseStdDev(0.05 * (1 + std::stoi(idString)));
+    p_cell_cell_force->SetNormalNoiseStdDev(0.03);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
