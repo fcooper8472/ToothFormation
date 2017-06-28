@@ -231,7 +231,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_cell_cell_force->SetLaminaWellDepthMult(2.0);
     p_cell_cell_force->SetAdditiveNormalNoise(true);
     p_cell_cell_force->SetNormalNoiseMean(0.0);
-    p_cell_cell_force->SetNormalNoiseStdDev(0.2);
+    p_cell_cell_force->SetNormalNoiseStdDev(0.05 * (1 + std::stoi(idString)));
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
