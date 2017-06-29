@@ -135,7 +135,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         // \todo Remove this hack for reducing apical lamina stiffness
         if (rElement.GetIndex() == 1)
         {
-            well_depth *= 0.2;
+            well_depth *= 1.0;
         }
     }
     else // regular element
@@ -186,7 +186,7 @@ double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(unsigned elem_
     // Left
     if (elem_region == 0)
     {
-        if (node_region == RIGHT_APICAL_REGION)// || node_region == RIGHT_PERIAPICAL_REGION)
+        if (node_region == RIGHT_APICAL_REGION || node_region == RIGHT_PERIAPICAL_REGION)
         {
             stiffness_mult = mStiffnessMult;
         }
@@ -194,7 +194,7 @@ double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(unsigned elem_
     // Right
     else if (elem_region == 2)
     {
-        if (node_region == LEFT_APICAL_REGION)// || node_region == LEFT_PERIAPICAL_REGION)
+        if (node_region == LEFT_APICAL_REGION || node_region == LEFT_PERIAPICAL_REGION)
         {
             stiffness_mult = mStiffnessMult;
         }

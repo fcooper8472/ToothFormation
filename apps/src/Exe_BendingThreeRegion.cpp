@@ -70,11 +70,11 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /*
  * Prototype functions
  */
-void SetupSingletons();
+void SetupSingletons(unsigned seed);
 void DestroySingletons();
 void SetupAndRunSimulation(std::string idString, double corRestLength, double corSpringConst, double traRestLength,
                            double traSpringConst, double rhsAdhesionMod, double interactionDist, double stiffnessMult,
-                           unsigned reMeshFreq, unsigned numTimeSteps, bool apicalLamina);
+                           double normalStd, unsigned reMeshFreq, unsigned numTimeSteps, bool apicalLamina);
 void OutputToConsole(std::string idString, std::string leading);
 
 int main(int argc, char* argv[])
@@ -94,6 +94,7 @@ int main(int argc, char* argv[])
                     ("AD", boost::program_options::value<double>()->default_value(0.0),"Adhesion modifier")
                     ("DI", boost::program_options::value<double>()->default_value(0.0),"Interaction distance for cell-cell forces")
                     ("SM", boost::program_options::value<double>()->default_value(0.0),"Stiffness multiplier for membrane forces")
+                    ("NS", boost::program_options::value<double>()->default_value(0.0),"Standard deviation for normal noise")
                     ("RM", boost::program_options::value<unsigned>()->default_value(1u),"ReMesh frequency")
                     ("TS", boost::program_options::value<unsigned>()->default_value(1000u),"Number of time steps")
                     ("AL", boost::program_options::value<bool>()->default_value(false),"Whether to include apical lamina");
@@ -119,26 +120,27 @@ int main(int argc, char* argv[])
     double rhs_adhesion_mod = variables_map["AD"].as<double>();
     double interaction_dist = variables_map["DI"].as<double>();
     double stiffness_mult = variables_map["SM"].as<double>();
+    double normal_std = variables_map["NS"].as<double>();
     unsigned remesh_freq = variables_map["RM"].as<unsigned>();
     unsigned num_time_steps = variables_map["TS"].as<unsigned>();
     bool apical_lamina = variables_map["AL"].as<bool>();
 
     OutputToConsole(id_string, "Started");
-    SetupSingletons();
+    SetupSingletons(0u);
     SetupAndRunSimulation(id_string, cor_rest_length, cor_spring_const, tra_rest_length, tra_spring_const,
-                          rhs_adhesion_mod, interaction_dist, stiffness_mult, remesh_freq, num_time_steps,
-                          apical_lamina);
+                          rhs_adhesion_mod, interaction_dist, stiffness_mult, normal_std, remesh_freq,
+                          num_time_steps, apical_lamina);
     DestroySingletons();
     OutputToConsole(id_string, "Completed");
 }
 
-void SetupSingletons()
+void SetupSingletons(unsigned seed)
 {
     // Set up what the test suite would do
     SimulationTime::Instance()->SetStartTime(0.0);
 
     // Reseed with 0 for same random numbers each time, or time(NULL) or simulation_id to change each realisation
-    RandomNumberGenerator::Instance()->Reseed(0);
+    RandomNumberGenerator::Instance()->Reseed(seed);
     CellPropertyRegistry::Instance()->Clear();
     CellId::ResetMaxCellId();
 }
@@ -163,7 +165,7 @@ void OutputToConsole(std::string idString, std::string leading)
 
 void SetupAndRunSimulation(std::string idString, double corRestLength, double corSpringConst, double traRestLength,
                            double traSpringConst, double rhsAdhesionMod, double interactionDist, double stiffnessMult,
-                           unsigned reMeshFreq, unsigned numTimeSteps, bool apicalLamina)
+                           double normalStd, unsigned reMeshFreq, unsigned numTimeSteps, bool apicalLamina)
 {
     /*
      * 1: Num cells
@@ -176,7 +178,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
      * 8: Use a leaky lamina
      * 9: Num fluid mesh points: overrides nodes per cell
      */
-    ImmersedBoundaryPalisadeMeshGenerator gen(15u, 128u, 0.1, 2.0, 0.0, true, apicalLamina, true, 256u);
+    ImmersedBoundaryPalisadeMeshGenerator gen(15u, 128u, 0.05, 2.0, 0.0, true, apicalLamina, true, 256u);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
     std::cout << p_mesh->GetSpacingRatio() << std::endl;
@@ -229,7 +231,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_cell_cell_force->SetLaminaWellDepthMult(2.0);
     p_cell_cell_force->SetAdditiveNormalNoise(true);
     p_cell_cell_force->SetNormalNoiseMean(0.0);
-    p_cell_cell_force->SetNormalNoiseStdDev(0.03);
+    p_cell_cell_force->SetNormalNoiseStdDev(normalStd);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;

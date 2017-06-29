@@ -33,29 +33,30 @@ if not(os.path.isfile(executable)):
     quit('Py: Could not find executable: ' + executable)
 
 # List of command line arguments for the executable, and corresponding list of parameter names
-command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --TRL ', ' --TSC ', ' --AD ', ' --DI ', ' --SM ', ' --RM ',
-                     ' --TS ', ' --AL ']
+command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --TRL ', ' --TSC ', ' --AD ', ' --DI ', ' --SM ', ' --NS ',
+                     ' --RM ', ' --TS ', ' --AL ']
 params_list = ['simulation_id', 'cor_rest_length', 'cor_spring_const', 'tra_rest_length', 'tra_spring_const',
-               'adhesion_modifier', 'interaction_dist', 'stiffness_mult', 'remesh_frequency', 'num_time_steps',
-               'apical_lamina']
+               'adhesion_modifier', 'interaction_dist', 'stiffness_mult', 'normal_std', 'remesh_frequency',
+               'num_time_steps', 'apical_lamina']
 
 # Time string when script is run, used for creating a unique archive name
 today = time.strftime('%Y-%m-%dT%H%M')
 
 # Param ranges (in lists, for itertools product)
 crl = [0.25]
-csc = np.linspace(1.0 * 1e8, 2.0 * 1e8, num=1)
-trl = np.linspace(1.0, 8.0, num=1)
-tsc = [1.5 * 1e7]#np.linspace(5e7, 2e7, num=1)
+csc = np.linspace(1.0 * 1e8, 1.1 * 1e8, num=2)
+trl = [1.0]
+tsc = np.linspace(0.8 * 1e7, 1.0 * 1e7, num=1)
 ad = [1.0]
 di = [0.02]
-sm = np.linspace(0.4, 0.5, num=1)
+sm = np.linspace(0.1, 0.2, num=2)
+ns = [0.03]
 rf = [50]
-ts = [5000]
+ts = [30000]
 al = [True]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
-combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, sm, rf, ts, al))
+combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, sm, ns, rf, ts, al))
 
 
 def main():
@@ -138,7 +139,7 @@ def make_movies_parallel():
             quit('Py: Could not determine simulation index from svg directory string: ' + data_dir)
         idx = int(index_match.group(1))
 
-        command_list.append((data_dir, str(idx).zfill(2) + '.webm', 16.0/9, 15.0, False))
+        command_list.append((data_dir, str(idx).zfill(2) + '.webm', 16.0/9, 5.0, False))
 
     # Generate a pool of workers
     pool = mp.Pool(processes=mp.cpu_count())

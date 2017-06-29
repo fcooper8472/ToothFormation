@@ -165,7 +165,7 @@ void ApicalAndBasalTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopul
         }
 
         unsigned num_nodes_right = (num_nodes_elem + rtmost_apical_idx - rtmost_basal_idx - 1) % num_nodes_elem;
-        unsigned num_right_lateral = static_cast<unsigned>(0.8 * num_nodes_right);
+        unsigned num_right_lateral = static_cast<unsigned>(0.9 * num_nodes_right);
 
         for (unsigned i = 0; i < num_nodes_right; ++i)
         {
@@ -174,7 +174,7 @@ void ApicalAndBasalTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopul
         }
 
         unsigned num_nodes_left = (num_nodes_elem + ltmost_basal_idx - ltmost_apical_idx - 1) % num_nodes_elem;
-        unsigned num_left_lateral = static_cast<unsigned>(0.8 * num_nodes_left);
+        unsigned num_left_lateral = static_cast<unsigned>(0.9 * num_nodes_left);
 
         for (unsigned i = 0; i < num_nodes_left; ++i)
         {
