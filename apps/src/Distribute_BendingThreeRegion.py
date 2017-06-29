@@ -51,7 +51,7 @@ ad = [1.0]
 di = [0.02]
 sm = np.linspace(0.4, 0.5, num=1)
 rf = [50]
-ts = [10000]
+ts = [5000]
 al = [True]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above

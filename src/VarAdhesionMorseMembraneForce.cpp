@@ -135,7 +135,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         // \todo Remove this hack for reducing apical lamina stiffness
         if (rElement.GetIndex() == 1)
         {
-            well_depth *= 0.05;
+            well_depth *= 0.2;
         }
     }
     else // regular element
