@@ -14,6 +14,12 @@ except ImportError as e:
     quit("Exception: " + str(e))
 
 try:
+    import svg_to_png
+except ImportError as e:
+    svg_to_png = None
+    quit("Exception: " + str(e))
+
+try:
     import dominate
     from dominate.tags import *
 except ImportError as e:
@@ -121,6 +127,9 @@ def make_movies_parallel():
         quit("Py: Could not find output directory: " + path_to_output)
     if not (os.path.isdir(path_to_sims)):
         quit("Py: Could not find simulation output directory: " + path_to_sims)
+
+    # Convert all svg to png using cairosvg
+    svg_to_png.svg_to_png(path_to_output)
 
     # Create a set of directories containing any svg results files
     svg_pattern = re.compile('results_\d+\.svg')
