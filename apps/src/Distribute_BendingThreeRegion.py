@@ -8,9 +8,9 @@ import multiprocessing as mp
 import numpy as np
 
 try:
-    import svg_to_webm
+    import png_to_mp4
 except ImportError as e:
-    svg_to_webm = None
+    png_to_mp4 = None
     quit("Exception: " + str(e))
 
 try:
@@ -58,7 +58,7 @@ di = [0.02]
 sm = np.linspace(0.1, 0.2, num=2)
 ns = [0.03]
 rf = [50]
-ts = [30000]
+ts = [5000]
 al = [True]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
@@ -117,7 +117,7 @@ def execute_command(cmd):
     return subprocess.call(cmd, shell=True)
 
 
-# Make a webm from each svg output
+# Make an mp4 from each svg output
 def make_movies_parallel():
 
     print("Py: Combining chaste output to movies with " + str(mp.cpu_count()) + " processes")
@@ -131,12 +131,12 @@ def make_movies_parallel():
     # Convert all svg to png using cairosvg
     svg_to_png.svg_to_png(path_to_output)
 
-    # Create a set of directories containing any svg results files
-    svg_pattern = re.compile('results_\d+\.svg')
+    # Create a set of directories containing any png results files
+    png_pattern = re.compile('results_\d+\.png')
     data_dirs = set()
     for root, dirs, files in os.walk(path_to_sims):
         for f in files:
-            if svg_pattern.match(f) or f == 'svg_arch.tar.gz':
+            if png_pattern.match(f) or f == 'svg_arch.tar.gz':
                 data_dirs.add(root)
 
     command_list = []
@@ -145,24 +145,24 @@ def make_movies_parallel():
     for data_dir in data_dirs:
         index_match = idx_pattern.search(data_dir)
         if not index_match:
-            quit('Py: Could not determine simulation index from svg directory string: ' + data_dir)
+            quit('Py: Could not determine simulation index from directory string: ' + data_dir)
         idx = int(index_match.group(1))
 
-        command_list.append((data_dir, str(idx).zfill(2) + '.webm', 16.0/9, 5.0, False))
+        command_list.append((data_dir, str(idx).zfill(2) + '.mp4', 5.0, False))
 
     # Generate a pool of workers
     pool = mp.Pool(processes=mp.cpu_count())
 
     # Wait at most one day
-    pool.map_async(wrap_webm_command, command_list).get(86400)
+    pool.map_async(wrap_mp4_command, command_list).get(86400)
 
 
 # Helper function to wrap the movie making command so that it only takes one variable
-def wrap_webm_command(args):
+def wrap_mp4_command(args):
     try:
-        svg_to_webm.svg_to_webm(*args)
-    except Exception as svg_to_webm_exception:
-        print("Exception: " + str(svg_to_webm_exception))
+        png_to_mp4.png_to_mp4(*args)
+    except Exception as png_to_mp4_exception:
+        print("Exception: " + str(png_to_mp4_exception))
 
 
 # Gather the output from all simulations and put it in the same file
@@ -212,15 +212,15 @@ def generate_html():
 
     copy_assets()
 
-    # Copy all webm files into the movies directory
-    webm_numbers = []
-    webm_pattern = re.compile('(\d+)\.webm')
+    # Copy all mp4 files into the movies directory
+    mp4_numbers = []
+    mp4_pattern = re.compile('(\d+)\.mp4')
     for root, dirs, files in os.walk(path_to_sims):
         for f in files:
-            webm_match = webm_pattern.match(f)
-            if webm_match:
+            mp4_match = mp4_pattern.match(f)
+            if mp4_match:
                 subprocess.call(['cp', os.path.join(root, f), os.path.join(path_to_movies, f), '-u'])
-                webm_numbers.append(int(webm_match.group(1)))
+                mp4_numbers.append(int(mp4_match.group(1)))
 
     generate_movies_html(os.listdir(path_to_movies))
 
@@ -260,9 +260,9 @@ def generate_html():
         script(src='js/sort_table.js')
 
     with html_doc:
-        with div(_class='main').add(table(id='webm_table', _class='tablesorter')):
+        with div(_class='main').add(table(id='mp4_table', _class='tablesorter')):
             with thead():
-                td('Webm Name')
+                td('mp4 Name')
                 for idx, cell in enumerate(header_row):
                     if idx in unchanging_cols:
                         td(cell, _class='cell_header cell_unchanging')
@@ -272,11 +272,11 @@ def generate_html():
                 for row in params_and_results:
                     idx = int(row[0])
                     with tr():
-                        if idx in webm_numbers:
-                            webm = str(idx).zfill(2)
-                            td(a(webm + '.webm', href=os.path.join('html', webm + '.html'), target='_blank'))
+                        if idx in mp4_numbers:
+                            mp4 = str(idx).zfill(2)
+                            td(a(mp4 + '.mp4', href=os.path.join('html', mp4 + '.html'), target='_blank'))
                         else:
-                            td('no webm')
+                            td('no mp4')
                         for idx, cell in enumerate(row):
                             if idx in unchanging_cols:
                                 td(cell, _class='cell_right cell_unchanging')
@@ -343,10 +343,10 @@ def generate_movies_html(list_of_movie_names):
 
         with html_doc:
             with div(_class='video'):
-                video(controls='', src='../movies/'+movie_name, type='video/webm', _class='full')
+                video(controls='', src='../movies/'+movie_name, type='video/mp4', _class='full')
 
-        with open(os.path.join(path_to_html, movie_name.replace('.webm', '.html')), 'w') as webm_html:
-            webm_html.write(html_doc.render())
+        with open(os.path.join(path_to_html, movie_name.replace('.mp4', '.html')), 'w') as mp4_html:
+            mp4_html.write(html_doc.render())
 
 
 # Compress output and suffix with date run
