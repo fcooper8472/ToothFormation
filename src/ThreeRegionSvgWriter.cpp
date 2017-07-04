@@ -137,10 +137,15 @@ void ThreeRegionSvgWriter<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCe
     // Set precision so as not to write out too many decimal places of uncompressed text
     header << std::setprecision(5);
 
+    //
+    double aspect_ratio = 16.0 / 9.0;
+    double height = mSvgSize / aspect_ratio;
+    double offset = 0.5 * (mSvgSize - height);
+
     // Output svg header to file
     header << "<svg version=\"1.1\" baseProfile=\"full\" width=\""
-           << mSvgSize <<"px\" height=\"" << mSvgSize << "px\" "
-           << "viewBox=\"0 0 " << mSvgSize << " " << mSvgSize << "\" "
+           << mSvgSize <<"px\" height=\"" << height << "px\" "
+           << "viewBox=\"0 " << offset << " " << mSvgSize << " " << height << "\" "
            << "xmlns=\"http://www.w3.org/2000/svg\">" << "\n";
 
     // Add text/css style for elements
