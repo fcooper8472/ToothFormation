@@ -155,7 +155,7 @@ def make_movies_parallel():
             quit('Py: Could not determine simulation index from directory string: ' + data_dir)
         idx = int(index_match.group(1))
 
-        command_list.append((data_dir, str(idx).zfill(2) + '.mp4', 5.0, False))
+        command_list.append((data_dir, str(idx).zfill(2) + '.mp4', 10.0, False))
 
     # Generate a pool of workers
     pool = mp.Pool(processes=mp.cpu_count())

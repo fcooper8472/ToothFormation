@@ -238,8 +238,8 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     output_directory << "tooth_formation/Exe_BendingThreeRegion/sim/" << idString;
     simulator.SetOutputDirectory(output_directory.str());
 
-    // Calculate sampling multiple to have at least 5 frames per second on a 15 second video
-    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(numTimeSteps / (8.0 * 2.0))));
+    // Calculate sampling multiple to have at least 5 frames per second on a 10 second video
+    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(numTimeSteps / (10.0 * 5.0))));
 
     // Set simulation properties
     double dt = 0.01;
