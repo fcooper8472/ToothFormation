@@ -66,11 +66,18 @@ combined_iterable = list(itertools.product(crl, csc, trl, tsc, ad, di, sm, ns, r
 
 
 def main():
+    clean_output_dir()
     run_simulations()
     combine_output()
     make_movies_parallel()
     generate_html()
     compress_output()
+
+
+# Delete output directory
+def clean_output_dir():
+    if os.path.exists(path_to_output):
+        subprocess.call(['rm', '-rf', path_to_output])
 
 
 # Create a list of commands and pass them to separate processes
