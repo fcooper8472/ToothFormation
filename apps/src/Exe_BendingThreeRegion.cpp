@@ -34,6 +34,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <cxxtest/TestSuite.h>
+#include <thread>
 
 #include "ApicalAndBasalTaggingModifier.hpp"
 #include "CellId.hpp"
@@ -219,9 +220,11 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
     p_boundary_force->SetElementWellDepth(corSpringConst);
     p_boundary_force->SetElementRestLength(corRestLength);
-    p_boundary_force->SetLaminaWellDepth(2.0 * corSpringConst);
+    p_boundary_force->SetLaminaWellDepth(0.5 * corSpringConst);
     p_boundary_force->SetLaminaRestLength(corRestLength);
     p_boundary_force->SetStiffnessMult(stiffnessMult);
+//    SetLaminaWellDepthMult(1.0 + 0.4 * (std::strtod(idString.c_str(), nullptr)));
+
 
     auto p_cell_cell_force = boost::make_shared<ImmersedBoundaryMorseInteractionForce<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
@@ -242,11 +245,18 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(numTimeSteps / (10.0 * 5.0))));
 
     // Set simulation properties
-    double dt = 0.01;
+    double dt = 0.0005;
     simulator.SetDt(dt);
     simulator.SetSamplingTimestepMultiple(UINT_MAX);
     simulator.SetEndTime(numTimeSteps * dt);
     p_svg_writer->SetSamplingMultiple(sampling_multiple);
+
+    if (std::stoi(idString) % std::thread::hardware_concurrency() == 0)
+    {
+        std::cout << std::thread::hardware_concurrency() << std::endl;
+        ProgressReporter &r_progress = simulator.rSetUpAndGetProgressReporter();
+        r_progress.SetOutputToConsole(true);
+    }
 
     simulator.Solve();
 
