@@ -43,6 +43,7 @@ VarAdhesionMorseMembraneForce<DIM>::VarAdhesionMorseMembraneForce()
           mElementRestLength(0.5),
           mLaminaWellDepth(1e6),
           mLaminaRestLength(0.5),
+          mApicalWellDepthMult(1.0),
           mWellWidth(0.25),
           mStiffnessMult(1.0)
 {
@@ -132,10 +133,10 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         rest_length = mLaminaRestLength * node_spacing;
         well_width *= node_spacing;
 
-        // \todo Remove this hack for reducing apical lamina stiffness
+        // Alter the stiffness of the apical lamina, if required
         if (rElement.GetIndex() == 1)
         {
-            well_depth *= 1.0;
+            well_depth *= mApicalWellDepthMult;
         }
     }
     else // regular element
@@ -262,6 +263,18 @@ template <unsigned DIM>
 void VarAdhesionMorseMembraneForce<DIM>::SetLaminaRestLength(double laminaRestLength)
 {
     mLaminaRestLength = laminaRestLength;
+}
+
+template <unsigned DIM>
+double VarAdhesionMorseMembraneForce<DIM>::GetApicalWellDepthMult() const
+{
+    return mLaminaRestLength;
+}
+
+template <unsigned DIM>
+void VarAdhesionMorseMembraneForce<DIM>::SetApicalWellDepthMult(double apicalWellDepthMult)
+{
+    mApicalWellDepthMult = apicalWellDepthMult;
 }
 
 template <unsigned DIM>

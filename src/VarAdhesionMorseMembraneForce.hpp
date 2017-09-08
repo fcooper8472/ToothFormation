@@ -68,7 +68,9 @@ private:
         archive& mElementRestLength;
         archive& mLaminaWellDepth;
         archive& mLaminaRestLength;
+        archive& mApicalWellDepthMult;
         archive& mWellWidth;
+        archive& mStiffnessMult;
     }
 
     /** The basic interaction strength */
@@ -82,6 +84,9 @@ private:
 
     /** The rest length associated with each lamina as a fraction of the average node spacing */
     double mLaminaRestLength;
+
+    /** Stiffness multiplier for the apical lamina */
+    double mApicalWellDepthMult;
 
     /** The well width as a fraction of the average node spacing in either an element or lamina */
     double mWellWidth;
@@ -157,6 +162,12 @@ public:
 
     /** @param laminaRestLength the new value of mLaminaRestLength */
     void SetLaminaRestLength(double laminaRestLength);
+
+    /** @return mApicalWellDepthMult */
+    double GetApicalWellDepthMult() const;
+
+    /** @param apicalWellDepthMult the new value of mApicalWellDepthMult */
+    void SetApicalWellDepthMult(double apicalWellDepthMult);
 
     /** @return mWellWidth */
     double GetWellWidth() const;
