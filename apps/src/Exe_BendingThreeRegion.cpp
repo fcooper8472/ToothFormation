@@ -40,14 +40,13 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CellId.hpp"
 #include "CellRegionWriter.hpp"
 #include "CellsGenerator.hpp"
-#include "CellsGenerator.hpp"
 #include "ChasteMakeUnique.hpp"
 #include "CheckpointArchiveTypes.hpp"
 #include "ContactRegionTaggingModifier.hpp"
 #include "DifferentiatedCellProliferativeType.hpp"
-#include "DifferentiatedCellProliferativeType.hpp"
 #include "ExecutableSupport.hpp"
 #include "FluidSource.hpp"
+#include "ImmersedBoundaryKinematicFeedbackForce.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundaryMorseInteractionForce.hpp"
 #include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
@@ -68,15 +67,16 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/program_options/variables_map.hpp>
 #include <mesh/src/immersed_boundary/ImmersedBoundaryPalisadeMeshGenerator.hpp>
 
+// Make the variables map global for simplicity
+namespace bpo = boost::program_options;
+bpo::variables_map gVariablesMap;
+
 /*
  * Prototype functions
  */
 void SetupSingletons(unsigned seed);
 void DestroySingletons();
-void SetupAndRunSimulation(std::string idString, double corRestLength, double corSpringConst, double traRestLength,
-                           double traSpringConst, double rhsAdhesionMod, double interactionDist, double stiffnessMult,
-                           double normalStd, unsigned reMeshFreq, unsigned numTimeSteps, bool apicalLamina);
-void OutputToConsole(std::string idString, std::string leading);
+void SetupAndRunSimulation();
 
 int main(int argc, char* argv[])
 {
@@ -84,55 +84,42 @@ int main(int argc, char* argv[])
     ExecutableSupport::StartupWithoutShowingCopyright(&argc, &argv);
 
     // Define command line options
-    boost::program_options::options_description general_options("This is a Chaste Immersed Boundary executable.\n");
+    bpo::options_description general_options("This is a Chaste Immersed Boundary executable.\n");
     general_options.add_options()
-                    ("help", "produce help message")
-                    ("ID", boost::program_options::value<std::string>(),"ID string for the simulation")
-                    ("CRL", boost::program_options::value<double>()->default_value(0.0),"Cortical rest length")
-                    ("CSC", boost::program_options::value<double>()->default_value(0.0),"Cortical spring constant")
-                    ("TRL", boost::program_options::value<double>()->default_value(0.0),"Transmembrane rest length")
-                    ("TSC", boost::program_options::value<double>()->default_value(0.0),"Transmembrane spring constant")
-                    ("AD", boost::program_options::value<double>()->default_value(0.0),"Adhesion modifier")
-                    ("DI", boost::program_options::value<double>()->default_value(0.0),"Interaction distance for cell-cell forces")
-                    ("SM", boost::program_options::value<double>()->default_value(0.0),"Stiffness multiplier for membrane forces")
-                    ("NS", boost::program_options::value<double>()->default_value(0.0),"Standard deviation for normal noise")
-                    ("RM", boost::program_options::value<unsigned>()->default_value(1u),"ReMesh frequency")
-                    ("TS", boost::program_options::value<unsigned>()->default_value(1000u),"Number of time steps")
-                    ("AL", boost::program_options::value<bool>()->default_value(false),"Whether to include apical lamina");
+        ("help", "produce help message")
+        ("ID", bpo::value<std::string>(),"ID string for the simulation")
+        ("CRL", bpo::value<double>()->default_value(0.0),"Cortical rest length")
+        ("CSC", bpo::value<double>()->default_value(0.0),"Cortical spring constant")
+        ("TRL", bpo::value<double>()->default_value(0.0),"Transmembrane rest length")
+        ("TSC", bpo::value<double>()->default_value(0.0),"Transmembrane spring constant")
+        ("KFS", bpo::value<double>()->default_value(0.0),"Kinematic Feedback strength")
+        ("ALM", bpo::value<double>()->default_value(0.0),"Apical lamina stiffness multiplier")
+        ("DI", bpo::value<double>()->default_value(0.0),"Interaction distance for cell-cell forces")
+        ("SM", bpo::value<double>()->default_value(0.0),"Stiffness multiplier for membrane forces")
+        ("NS", bpo::value<double>()->default_value(0.0),"Standard deviation for normal noise")
+        ("RM", bpo::value<unsigned>()->default_value(1u),"ReMesh frequency")
+        ("TS", bpo::value<unsigned>()->default_value(1000u),"Number of time steps")
+        ("AL", bpo::value<bool>()->default_value(false),"Whether to include apical lamina");
 
     // Define parse command line into variables_map
-    boost::program_options::variables_map variables_map;
-    boost::program_options::store(parse_command_line(argc, argv, general_options), variables_map);
+    bpo::store(parse_command_line(argc, argv, general_options), gVariablesMap);
 
     // Print help message if wanted
-    if (variables_map.count("help"))
+    if (gVariablesMap.count("help"))
     {
         std::cout << setprecision(3) << general_options << "\n";
         std::cout << general_options << "\n";
         return 1;
     }
 
-    // Get ID and name from command line
-    std::string id_string = variables_map["ID"].as<std::string>();
-    double cor_rest_length = variables_map["CRL"].as<double>();
-    double cor_spring_const = variables_map["CSC"].as<double>();
-    double tra_rest_length = variables_map["TRL"].as<double>();
-    double tra_spring_const = variables_map["TSC"].as<double>();
-    double rhs_adhesion_mod = variables_map["AD"].as<double>();
-    double interaction_dist = variables_map["DI"].as<double>();
-    double stiffness_mult = variables_map["SM"].as<double>();
-    double normal_std = variables_map["NS"].as<double>();
-    unsigned remesh_freq = variables_map["RM"].as<unsigned>();
-    unsigned num_time_steps = variables_map["TS"].as<unsigned>();
-    bool apical_lamina = variables_map["AL"].as<bool>();
+    // Get ID string from command line
+    std::string id_string = gVariablesMap["ID"].as<std::string>();
 
-    OutputToConsole(id_string, "Started");
+    std::cout << "Starting simulation with ID string " << id_string << std::endl;
     SetupSingletons(0u);
-    SetupAndRunSimulation(id_string, cor_rest_length, cor_spring_const, tra_rest_length, tra_spring_const,
-                          rhs_adhesion_mod, interaction_dist, stiffness_mult, normal_std, remesh_freq,
-                          num_time_steps, apical_lamina);
+    SetupAndRunSimulation();
     DestroySingletons();
-    OutputToConsole(id_string, "Completed");
+    std::cout << "Completed simulation with ID string " << id_string << std::endl;
 }
 
 void SetupSingletons(unsigned seed)
@@ -154,20 +141,23 @@ void DestroySingletons()
     CellPropertyRegistry::Instance()->Clear();
 }
 
-void OutputToConsole(std::string idString, std::string leading)
+void SetupAndRunSimulation()
 {
-    // Compose the message
-    std::stringstream message;
-    message << leading << " simulation with ID string " << idString << std::endl;
+    // Get all variables from the global variables map
+    std::string id_string = gVariablesMap["ID"].as<std::string>();
+    double cor_rest_length = gVariablesMap["CRL"].as<double>();
+    double cor_spring_const = gVariablesMap["CSC"].as<double>();
+    double tra_rest_length = gVariablesMap["TRL"].as<double>();
+    double tra_spring_const = gVariablesMap["TSC"].as<double>();
+    double kin_feedback_str = gVariablesMap["KFS"].as<double>();
+    double apical_lam_mult = gVariablesMap["ALM"].as<double>();
+    double interaction_dist = gVariablesMap["DI"].as<double>();
+    double stiffness_mult = gVariablesMap["SM"].as<double>();
+    double normal_std = gVariablesMap["NS"].as<double>();
+    unsigned remesh_freq = gVariablesMap["RM"].as<unsigned>();
+    unsigned num_time_steps = gVariablesMap["TS"].as<unsigned>();
+    bool apical_lamina = gVariablesMap["AL"].as<bool>();
 
-    // Send it to the console
-    std::cout << message.str() << std::flush;
-}
-
-void SetupAndRunSimulation(std::string idString, double corRestLength, double corSpringConst, double traRestLength,
-                           double traSpringConst, double rhsAdhesionMod, double interactionDist, double stiffnessMult,
-                           double normalStd, unsigned reMeshFreq, unsigned numTimeSteps, bool apicalLamina)
-{
     /*
      * 1: Num cells
      * 2: Num nodes per cell
@@ -179,7 +169,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
      * 8: Use a leaky lamina
      * 9: Num fluid mesh points: overrides nodes per cell
      */
-    ImmersedBoundaryPalisadeMeshGenerator gen(15u, 128u, 0.05, 2.0, 0.0, true, apicalLamina, true, 256u);
+    ImmersedBoundaryPalisadeMeshGenerator gen(15u, 128u, 0.05, 2.0, 0.0, true, apical_lamina, false, 256u);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
     std::cout << p_mesh->GetSpacingRatio() << std::endl;
@@ -190,9 +180,9 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
 
     ImmersedBoundaryCellPopulation<2> cell_population(*p_mesh, cells);
     cell_population.SetIfPopulationHasActiveSources(false);
-    cell_population.SetInteractionDistance(interactionDist);
+    cell_population.SetInteractionDistance(interaction_dist);
 
-    cell_population.SetReMeshFrequency(reMeshFreq);
+    cell_population.SetReMeshFrequency(remesh_freq);
     cell_population.SetOutputNodeRegionToVtk(true);
 
     OffLatticeSimulation<2> simulator(cell_population);
@@ -206,7 +196,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     auto p_svg_writer = boost::make_shared<ThreeRegionSvgWriter<2>>();
     simulator.AddSimulationModifier(p_svg_writer);
 
-    if (apicalLamina)
+    if (apical_lamina)
     {
         simulator.AddSimulationModifier(boost::make_shared<ApicalAndBasalTaggingModifier<2>>());
     }
@@ -218,47 +208,58 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
     // Add force laws
     auto p_boundary_force = boost::make_shared<VarAdhesionMorseMembraneForce<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
-    p_boundary_force->SetElementWellDepth(corSpringConst);
-    p_boundary_force->SetElementRestLength(corRestLength);
-    p_boundary_force->SetLaminaWellDepth(0.5 * corSpringConst);
-    p_boundary_force->SetLaminaRestLength(corRestLength);
-    p_boundary_force->SetStiffnessMult(stiffnessMult);
+    p_boundary_force->SetElementWellDepth(cor_spring_const);
+    p_boundary_force->SetElementRestLength(cor_rest_length);
+    p_boundary_force->SetLaminaWellDepth(2.0 * cor_spring_const);
+    p_boundary_force->SetLaminaRestLength(cor_rest_length);
+    p_boundary_force->SetApicalWellDepthMult(apical_lam_mult);
+    p_boundary_force->SetStiffnessMult(stiffness_mult);
 //    SetLaminaWellDepthMult(1.0 + 0.4 * (std::strtod(idString.c_str(), nullptr)));
 
+    auto p_kinematic_force = boost::make_shared<ImmersedBoundaryKinematicFeedbackForce<2>>();
+    p_main_modifier->AddImmersedBoundaryForce(p_kinematic_force);
+    p_kinematic_force->SetSpringConst(kin_feedback_str);
 
     auto p_cell_cell_force = boost::make_shared<ImmersedBoundaryMorseInteractionForce<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-    p_cell_cell_force->SetWellDepth(traSpringConst);
-    p_cell_cell_force->SetRestLength(0.25 * interactionDist * traRestLength);
+    p_cell_cell_force->SetWellDepth(tra_spring_const);
+    p_cell_cell_force->SetRestLength(0.25 * interaction_dist * tra_rest_length);
     p_cell_cell_force->SetLaminaRestLengthMult(2.0);
     p_cell_cell_force->SetLaminaWellDepthMult(2.0);
-    p_cell_cell_force->SetAdditiveNormalNoise(true);
-    p_cell_cell_force->SetNormalNoiseMean(0.0);
-    p_cell_cell_force->SetNormalNoiseStdDev(normalStd);
+//    p_cell_cell_force->SetAdditiveNormalNoise(true);
+//    p_cell_cell_force->SetNormalNoiseMean(0.0);
+//    p_cell_cell_force->SetNormalNoiseStdDev(normal_std);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
-    output_directory << "tooth_formation/Exe_BendingThreeRegion/sim/" << idString;
+    output_directory << "tooth_formation/Exe_BendingThreeRegion/sim/" << id_string;
     simulator.SetOutputDirectory(output_directory.str());
 
     // Calculate sampling multiple to have at least 5 frames per second on a 10 second video
-    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(numTimeSteps / (10.0 * 5.0))));
+    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (10.0 * 2.0))));
 
     // Set simulation properties
-    double dt = 0.0005;
+    double dt = 0.01;
     simulator.SetDt(dt);
     simulator.SetSamplingTimestepMultiple(UINT_MAX);
-    simulator.SetEndTime(numTimeSteps * dt);
+    simulator.SetEndTime(num_time_steps * dt);
     p_svg_writer->SetSamplingMultiple(sampling_multiple);
 
-    if (std::stoi(idString) % std::thread::hardware_concurrency() == 0)
+    if (std::stoi(id_string) % std::thread::hardware_concurrency() == 0)
     {
         std::cout << std::thread::hardware_concurrency() << std::endl;
         ProgressReporter &r_progress = simulator.rSetUpAndGetProgressReporter();
         r_progress.SetOutputToConsole(true);
     }
 
-    simulator.Solve();
+    try
+    {
+        simulator.Solve();
+    }
+    catch(const Exception& e)
+    {
+        std::cout << e.GetMessage() << std::endl;
+    }
 
     // Calculate the maximal height variation along the lamina
     double max_y = 0.0;
@@ -286,7 +287,7 @@ void SetupAndRunSimulation(std::string idString, double corRestLength, double co
                     << "max_y_var,"
                     << "asymmetry_measure" << std::endl;
 
-    (*results_file) << idString << ","
+    (*results_file) << id_string << ","
                     << boost::lexical_cast<std::string>(max_y - min_y) << ","
                     << p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(4, unit_vector<double>(2, 0));
 
