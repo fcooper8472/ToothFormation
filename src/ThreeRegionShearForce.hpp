@@ -55,8 +55,6 @@ class ThreeRegionShearForce : public AbstractImmersedBoundaryForce<DIM>
 {
 private:
 
-    friend class TestImmersedBoundaryForces;
-
     friend class boost::serialization::access;
     /**
      * Boost Serialization method for archiving/checkpointing.
@@ -75,29 +73,8 @@ private:
     /** The basic spring constant associated with interactions */
     double mSpringConst;
 
-    /** Vector to contain the location of each node at the previous time step */
-    std::vector<c_vector<double, DIM>> mPreviousLocations;
-
-    /**
-     * Helper function for AddImmersedBoundaryForceContribution().  Repopulate mPreviousLocations with new values.
-     * @param rCellPopulation the cell population
-     */
-    void UpdatePreviousLocations(ImmersedBoundaryCellPopulation<DIM>& rCellPopulation);
-
-    /**
-     * Helper function for AddImmersedBoundaryForceContribution().  Calculates the component of their relative velocity
-     * in the direction perpendicular to the line joining the two nodes at the previous time step.
-     *
-     * This relative velocity is a measure of shear between two boundaries, which this force class amplifies.
-     *
-     * @param previousDisp displacement between a pair of interacting nodes at the previous time step
-     * @param currentDisp displacement between the same pair of interacting nodes at the current time step
-     * @param unitPerp filled in as a unit vector perpendicular to previousDisp
-     * @return the component of the relative velocity of the nodes in the direction of unitPerp
-     */
-    double CalculateRelativeVelocityComponent(const c_vector<double, DIM>& previousDisp,
-                                              const c_vector<double, DIM>& currentDisp,
-                                              c_vector<double, DIM>& unitPerp);
+    /** The node regions that do not participate in this force class */
+    const std::vector<unsigned> mExcludedRegions;
 
 public:
 
@@ -127,10 +104,8 @@ public:
      */
     void OutputImmersedBoundaryForceParameters(out_stream& rParamsFile);
 
-    /** @return mSpringConst */
     double GetSpringConst() const;
 
-    /** @param springConst the new value of mSpringConst */
     void SetSpringConst(double springConst);
 };
 

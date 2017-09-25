@@ -33,7 +33,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "ImmersedBoundaryKinematicFeedbackForce.hpp"
+#include "ThreeRegionShearForce.hpp"
 #include "ImmersedBoundaryEnumerations.hpp"
 #include "UblasCustomFunctions.hpp"
 
@@ -41,7 +41,7 @@ template <unsigned DIM>
 ThreeRegionShearForce<DIM>::ThreeRegionShearForce()
         : AbstractImmersedBoundaryForce<DIM>(),
           mSpringConst(1e3),
-          mPreviousLocations()
+          mExcludedRegions({LEFT_LATERAL_REGION, RIGHT_LATERAL_REGION, LEFT_BASAL_REGION, RIGHT_BASAL_REGION, LAMINA_REGION, NO_REGION})
 {
 }
 
@@ -49,18 +49,20 @@ template <unsigned DIM>
 void ThreeRegionShearForce<DIM>::AddImmersedBoundaryForceContribution(std::vector<std::pair<Node<DIM>*, Node<DIM>*> >& rNodePairs,
                                                                                        ImmersedBoundaryCellPopulation<DIM>& rCellPopulation)
 {
-    // Calculate force only if neither node is in a lamina, and if nodes are in different elements
-    auto condition_satisfied = [&rCellPopulation](const std::pair<Node<DIM>*, Node<DIM>*>& pair) -> bool
+    // Calculate which of the three regions the element is in
+    auto middle_region = [&rCellPopulation](const unsigned& elem_idx) -> bool
     {
-        // Chuck out excluded regions
-        auto excluded_regions = {LEFT_LATERAL_REGION, RIGHT_LATERAL_REGION, LEFT_BASAL_REGION, RIGHT_BASAL_REGION, LAMINA_REGION, NO_REGION};
-        
+        EXCEPT_IF_NOT(rCellPopulation.GetNumElements() % 3 == 0);
+        unsigned num_elems_per_region = rCellPopulation.GetNumElements() / 3;
+        return elem_idx >= num_elems_per_region && elem_idx < 2 * num_elems_per_region;
+    };
 
-
-        if (std::any_of(excluded_regions.))
-
-        // Laminas do not participate in this force class
-        if (pair.first->GetRegion() == LAMINA_REGION || pair.second->GetRegion() == LAMINA_REGION)
+    // Calculate force only if neither node is in a lamina, and if nodes are in different elements
+    auto condition_satisfied = [&](const std::pair<Node<DIM>*, Node<DIM>*>& pair) -> bool
+    {
+        // If any of the excluded regions match the region of either node, return false
+        if (std::any_of(std::begin(mExcludedRegions), std::end(mExcludedRegions),
+                        [&](unsigned i){return i == pair.first->GetRegion() || i == pair.second->GetRegion();}))
         {
             return false;
         }
@@ -69,12 +71,13 @@ void ThreeRegionShearForce<DIM>::AddImmersedBoundaryForceContribution(std::vecto
         {
             return false;
         }
-
-        // One node in each
-//        if (pair.first->GetRegion() == LEFT_APICAL_REGION || pair.first->GetRegion() == LEFT_PERIAPICAL_REGION)
-
-
-        // Return true if the nodes are within threshold distance, else false
+        // If both nodes are in the middle region, return false
+        if (middle_region(*(pair.first->ContainingElementsBegin())) &&
+            middle_region(*(pair.second->ContainingElementsBegin())))
+        {
+            return false;
+        }
+        // Return true only if the nodes are within threshold distance
         auto vec_a2b = rCellPopulation.rGetMesh().GetVectorFromAtoB(pair.first->rGetLocation(), pair.second->rGetLocation());
         return norm_2(vec_a2b) < rCellPopulation.GetInteractionDistance();
     };
@@ -83,84 +86,55 @@ void ThreeRegionShearForce<DIM>::AddImmersedBoundaryForceContribution(std::vecto
     {
         if (condition_satisfied(pair))
         {
-            Node<DIM>* p_node_a = pair.first;
-            Node<DIM>* p_node_b = pair.second;
+            // Determine outer and inner nodes by finding element closest in index to the centre
+            auto half_num_elems = static_cast<int>(rCellPopulation.GetNumElements() / 2);
+            Node<DIM>* p_outer_node = std::abs(half_num_elems - static_cast<int>(*(pair.first->ContainingElementsBegin()))) >
+                                      std::abs(half_num_elems - static_cast<int>(*(pair.second->ContainingElementsBegin()))) ?
+                                      pair.first : pair.second;
+            Node<DIM>* p_inner_node = p_outer_node == pair.first ? pair.second : pair.first;
 
-            // Get the current and previous displacement between nodes
-            auto previous_disp = rCellPopulation.rGetMesh().GetVectorFromAtoB(mPreviousLocations[p_node_a->GetIndex()],
-                                                                              mPreviousLocations[p_node_b->GetIndex()]);
-            auto current_disp = rCellPopulation.rGetMesh().GetVectorFromAtoB(p_node_a->rGetLocation(),
-                                                                             p_node_b->rGetLocation());
+            // Get a unit vector from the previous node to the next node, oriented in the positive y direction
+            auto GetChord = [&rCellPopulation](const Node<DIM>& rNode) -> c_vector<double, DIM>
+            {
+                const auto& r_elem = *rCellPopulation.GetElement(*(rNode.ContainingElementsBegin()));
+                const unsigned local_idx = r_elem.GetNodeLocalIndex(rNode.GetIndex());
+                const unsigned next_idx = (local_idx + 1u) % r_elem.GetNumNodes();
+                const unsigned prev_idx = ((local_idx + r_elem.GetNumNodes()) - 1) % r_elem.GetNumNodes();
+                auto vec_a2b = rCellPopulation.rGetMesh().GetVectorFromAtoB(r_elem.GetNode(prev_idx)->rGetLocation(),
+                                                                            r_elem.GetNode(next_idx)->rGetLocation());
+                if (vec_a2b[1] < 0.0)
+                {
+                    vec_a2b *= -1.0;
+                }
+                return vec_a2b;
+            };
 
-            // Calculate the relative velocity and fill in unit_perp, the direction of the force that will act
-            c_vector<double, DIM> unit_perp;
-            double relative_vel_comp = CalculateRelativeVelocityComponent(previous_disp, current_disp, unit_perp);
+            const c_vector<double, DIM> average_chord = 0.5 * (GetChord(*p_inner_node) + GetChord(*p_outer_node));
 
-            unsigned a_idx = *(p_node_a->ContainingElementsBegin());
-            unsigned b_idx = *(p_node_b->ContainingElementsBegin());
+            const unsigned outer_elem_idx = *(p_outer_node->ContainingElementsBegin());
+            const unsigned inner_elem_idx = *(p_inner_node->ContainingElementsBegin());
 
-            double node_a_elem_spacing = rCellPopulation.rGetMesh().GetAverageNodeSpacingOfElement(a_idx, false);
-            double node_b_elem_spacing = rCellPopulation.rGetMesh().GetAverageNodeSpacingOfElement(b_idx, false);
+            const double outer_elem_spacing = rCellPopulation.rGetMesh().GetAverageNodeSpacingOfElement(outer_elem_idx, false);
+            const double inner_elem_spacing = rCellPopulation.rGetMesh().GetAverageNodeSpacingOfElement(inner_elem_idx, false);
+            const double elem_spacing = 0.5 * (outer_elem_spacing + inner_elem_spacing);
 
-            double elem_spacing = 0.5 * (node_a_elem_spacing + node_b_elem_spacing);
-
-            double eff_spring_const = mSpringConst * elem_spacing / rCellPopulation.GetIntrinsicSpacing();
+            const double eff_spring_const = mSpringConst * elem_spacing / rCellPopulation.GetIntrinsicSpacing();
 
             /*
              * We must scale each applied force by a factor of elem_spacing / local spacing, so that forces
              * balance when spread to the grid later (where the multiplicative factor is the local spacing)
              */
-            // \todo: change this to something sigmoidal?
-            c_vector<double, DIM> force = unit_perp * (relative_vel_comp * eff_spring_const);
+            c_vector<double, DIM> outer_force = (eff_spring_const * elem_spacing / outer_elem_spacing) * average_chord;
+            p_outer_node->AddAppliedForceContribution(outer_force);
 
-            c_vector<double, DIM> force_on_b = force * (elem_spacing / node_a_elem_spacing);
-            p_node_b->AddAppliedForceContribution(force_on_b);
-
-            c_vector<double, DIM> force_on_a = force * (-1.0 * elem_spacing / node_b_elem_spacing);
-            p_node_a->AddAppliedForceContribution(force_on_a);
+            c_vector<double, DIM> inner_force = (-1.0 * eff_spring_const * elem_spacing / inner_elem_spacing) * average_chord;
+            p_inner_node->AddAppliedForceContribution(inner_force);
         }
     }
-
-    UpdatePreviousLocations(rCellPopulation);
 
     if (this->mAdditiveNormalNoise)
     {
         this->AddNormalNoiseToNodes(rCellPopulation);
-    }
-}
-
-template <unsigned DIM>
-double ThreeRegionShearForce<DIM>::CalculateRelativeVelocityComponent(
-        const c_vector<double, DIM>& previousDisp,
-        const c_vector<double, DIM>& currentDisp,
-        c_vector<double, DIM>& unitPerp)
-{
-    // Get a unit vector perpendicular to the line joining the nodes at the previous time step
-    unitPerp = Create_c_vector(-previousDisp[1], previousDisp[0]);
-    unitPerp /= norm_2(unitPerp);
-
-    // Calculate the relative velocity component in the direction of the perpendicular
-    return inner_prod(currentDisp / SimulationTime::Instance()->GetTimeStep(), unitPerp);
-}
-
-template<unsigned DIM>
-void ThreeRegionShearForce<DIM>::UpdatePreviousLocations(ImmersedBoundaryCellPopulation<DIM>& rCellPopulation)
-{
-    // \todo this assumes the number of nodes in the simulation does not change over time
-    EXCEPT_IF_NOT(mPreviousLocations.size() == rCellPopulation.GetNumNodes());
-
-    // Populate the mPreviousLocations vector with the current location of nodes, so it's ready for next time step
-    for (const auto& p_node : rCellPopulation.rGetMesh().rGetNodes())
-    {
-        if (p_node->GetRegion() != LAMINA_REGION)
-        {
-            if (p_node->GetIndex() > mPreviousLocations.size())
-            {
-                mPreviousLocations.resize(p_node->GetIndex());
-            }
-
-            mPreviousLocations[p_node->GetIndex()] = p_node->rGetLocation();
-        }
     }
 }
 
@@ -184,6 +158,7 @@ void ThreeRegionShearForce<DIM>::SetSpringConst(double springConst)
 {
     mSpringConst = springConst;
 }
+
 
 // Explicit instantiation
 template class ThreeRegionShearForce<1>;
