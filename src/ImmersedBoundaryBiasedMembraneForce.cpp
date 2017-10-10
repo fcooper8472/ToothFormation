@@ -34,6 +34,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "ImmersedBoundaryBiasedMembraneForce.hpp"
+#include "UblasVectorInclude.hpp"
 
 template <unsigned DIM>
 ImmersedBoundaryBiasedMembraneForce<DIM>::ImmersedBoundaryBiasedMembraneForce()
@@ -88,14 +89,22 @@ void ImmersedBoundaryBiasedMembraneForce<DIM>::CalculateForcesOnElement(Immersed
     // Make a vector to store the force on node i+1 from node i
     std::vector<c_vector<double, DIM> > elastic_Forceto_next_node(num_nodes);
 
+    // Lambda to compare two nodes in this element by their x-position
+    auto compare_x = [&rElement](const unsigned& a, const unsigned& b) -> bool
+    {
+        return rElement.GetNode(a)->rGetLocation()[0] < rElement.GetNode(b)->rGetLocation()[0];
+    };
+
+    // Lambda to compare two nodes in this element by their y-position
+    auto compare_y = [&rElement](const unsigned& a, const unsigned& b) -> bool
+    {
+        return rElement.GetNode(a)->rGetLocation()[1] < rElement.GetNode(b)->rGetLocation()[1];
+    };
+
     // Local indices of nodes in this element, sorted by x-pos
     std::vector<unsigned> sorted_indices(rElement.GetNumNodes());
     std::iota(sorted_indices.begin(), sorted_indices.end(), 0u);
-    std::sort(sorted_indices.begin(), sorted_indices.end(),
-              [&rElement](const unsigned& a, const unsigned& b)
-              {
-                  return rElement.GetNode(a)->rGetLocation()[0] < rElement.GetNode(b)->rGetLocation()[0];
-              });
+    std::sort(sorted_indices.begin(), sorted_indices.end(), compare_x);
 
     // Create vectors containing indices of the left and right-most nodes in the element
     const unsigned num_special_nodes = std::lround(sorted_indices.size() * 0.3);
@@ -173,6 +182,43 @@ void ImmersedBoundaryBiasedMembraneForce<DIM>::CalculateForcesOnElement(Immersed
         // Add the aggregate force contribution to the node
         rElement.GetNode(node_idx)->AddAppliedForceContribution(aggregate_force);
     }
+
+    // Add on width/height springs
+    auto lf_min_max = std::minmax_element(lt_most.begin(), lt_most.end(), compare_y);
+    auto rt_min_max = std::minmax_element(rt_most.begin(), rt_most.end(), compare_y);
+
+    const double width = 0.4;
+    const double height = 0.6;
+    const double factor = 0.25;
+
+    Node<DIM>* p_top_lt = rElement.GetNode(*lf_min_max.second);
+    Node<DIM>* p_top_rt = rElement.GetNode(*rt_min_max.second);
+    Node<DIM>* p_bot_lt = rElement.GetNode(*lf_min_max.first);
+    Node<DIM>* p_bot_rt = rElement.GetNode(*rt_min_max.first);
+
+    auto left = p_top_lt->rGetLocation() - p_bot_lt->rGetLocation();
+    const double len_1 = norm_2(left);
+    const auto force_1 = factor * (len_1 - height) * mElementSpringConst * left / len_1;
+    p_top_lt->AddAppliedForceContribution(-force_1);
+    p_bot_lt->AddAppliedForceContribution(force_1);
+
+    auto right = p_top_rt->rGetLocation() - p_bot_rt->rGetLocation();
+    const double len_2 = norm_2(right);
+    const auto force_2 = factor * (len_2 - height) * mElementSpringConst * right / len_2;
+    p_top_rt->AddAppliedForceContribution(-force_2);
+    p_bot_rt->AddAppliedForceContribution(force_2);
+
+    auto top = p_top_lt->rGetLocation() - p_top_rt->rGetLocation();
+    const double len_3 = norm_2(top);
+    const auto force_3 = factor * (len_3 - width) * mElementSpringConst * top / len_3;
+    p_top_lt->AddAppliedForceContribution(-force_3);
+    p_top_rt->AddAppliedForceContribution(force_3);
+
+    auto bot = p_bot_lt->rGetLocation() - p_bot_rt->rGetLocation();
+    const double len_4 = norm_2(bot);
+    const auto force_4 = factor * (len_4 - width) * mElementSpringConst * bot / len_4;
+    p_bot_lt->AddAppliedForceContribution(-force_4);
+    p_bot_rt->AddAppliedForceContribution(force_4);
 }
 
 template <unsigned DIM>
