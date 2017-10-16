@@ -37,6 +37,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ImmersedBoundaryCellPopulation.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundaryEnumerations.hpp"
+#include "UblasCustomFunctions.hpp"
 
 template <unsigned DIM>
 ContactRegionTaggingModifier<DIM>::ContactRegionTaggingModifier()
@@ -44,103 +45,113 @@ ContactRegionTaggingModifier<DIM>::ContactRegionTaggingModifier()
 {
 }
 
-template <unsigned DIM>
-ContactRegionTaggingModifier<DIM>::~ContactRegionTaggingModifier()
-{
-}
 
 template <unsigned DIM>
 void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM, DIM>& rCellPopulation)
 {
-    ImmersedBoundaryMesh<DIM, DIM>* p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM>*>(&(rCellPopulation.rGetMesh()));
+    auto p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM>*>(&(rCellPopulation.rGetMesh()));
 
-    // Just get this once
-    double nbr_dist = 4.0 * p_mesh->GetNeighbourDist();
+    // Just get this once \todo: can this magic number be removed?
+    const double nbr_dist = 4.0 * p_mesh->GetNeighbourDist();
 
     // Iterate over elements
-    for (typename ImmersedBoundaryMesh<DIM, DIM>::ImmersedBoundaryElementIterator elem_it = p_mesh->GetElementIteratorBegin();
-         elem_it != p_mesh->GetElementIteratorEnd();
-         ++elem_it)
+    for (auto elem_it = p_mesh->GetElementIteratorBegin(); elem_it != p_mesh->GetElementIteratorEnd(); ++elem_it)
     {
+        // Wipe the corners
+        for (auto& p_node : elem_it->rGetCornerNodes())
+        {
+            p_node = nullptr;
+        }
+
         const c_vector<double, DIM> centroid = p_mesh->GetCentroidOfElement(elem_it->GetIndex());
         const unsigned num_nodes_elem = elem_it->GetNumNodes();
+        const unsigned max_basal_nodes = std::lround(num_nodes_elem / 6.0);
 
         // Orient short axis to point in the positive x direction
         c_vector<double, DIM> short_axis = p_mesh->GetShortAxisOfElement(elem_it->GetIndex());
         short_axis = short_axis[0] > 0.0 ? short_axis : -short_axis;
+        const auto long_axis = Create_c_vector(-short_axis[1], short_axis[0]);
 
-        // We need to find the furthest right & left basal nodes
-        unsigned furthest_right_idx = UNSIGNED_UNSET;
-        unsigned furthest_left_idx = UNSIGNED_UNSET;
+        // Lambda to compare two elements by distance along the long axis
+        auto compare_long_axis = [&](const unsigned& a, const unsigned& b) ->bool
+        {
+            const auto& to_a = p_mesh->GetVectorFromAtoB(centroid, elem_it->GetNode(a)->rGetLocation());
+            const auto& to_b = p_mesh->GetVectorFromAtoB(centroid, elem_it->GetNode(b)->rGetLocation());
+            return inner_prod(to_a, long_axis) < inner_prod(to_b, long_axis);
+        };
+
+        // Lambda to compare two elements by distance along the short axis
+        auto compare_short_axis = [&](const unsigned& a, const unsigned& b) ->bool
+        {
+            const auto& to_a = p_mesh->GetVectorFromAtoB(centroid, elem_it->GetNode(a)->rGetLocation());
+            const auto& to_b = p_mesh->GetVectorFromAtoB(centroid, elem_it->GetNode(b)->rGetLocation());
+            return inner_prod(to_a, short_axis) < inner_prod(to_b, short_axis);
+        };
+
+        // Create a vector filled with {0, ..., num_nodes_elem-1}, that can be used for partial sorting
+        std::vector<unsigned> partial_sort(num_nodes_elem);
+        std::iota(partial_sort.begin(), partial_sort.end(), 0u);
+
+        // Partially sort so that first indices are those of nodes lowest down the long axis
+        std::nth_element(partial_sort.begin(), partial_sort.begin() + max_basal_nodes,
+                         partial_sort.end(), compare_long_axis);
+
+        // Up to max_basal_nodes are all the nodes that are allowed to be basal (but they are not necessarily so)
+        std::vector<unsigned> possible_basal_indices;
+        for (unsigned i = 0; i < max_basal_nodes; ++i)
+        {
+            possible_basal_indices.emplace_back(partial_sort[i]);
+        }
+
+        // This will be filled in during the loop
+        std::vector<unsigned> actual_basal_indices;
 
         // First loop over every node.  Set initially as all apical, then tag correct nodes as basal
         for (unsigned node_idx = 0; node_idx < num_nodes_elem; ++node_idx)
         {
             // Get the current node, and determine whether it's on the left or right of the long axis
-            Node<DIM>* p_this_node = p_mesh->GetNode(elem_it->GetNodeGlobalIndex(node_idx));
-            bool node_on_left = inner_prod(short_axis, p_mesh->GetVectorFromAtoB(centroid, p_this_node->rGetLocation())) < 0.0;
+            Node<DIM>* const p_this_node = p_mesh->GetNode(elem_it->GetNodeGlobalIndex(node_idx));
+            const bool node_on_left = inner_prod(short_axis, p_mesh->GetVectorFromAtoB(centroid, p_this_node->rGetLocation())) < 0.0;
 
             p_this_node->SetRegion(node_on_left ? LEFT_APICAL_REGION : RIGHT_APICAL_REGION);
 
-            // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
-            const std::vector<unsigned>& node_neighbours = elem_it->GetNode(node_idx)->rGetNeighbours();
-
-            for(std::vector<unsigned>::const_iterator gbl_idx_it = node_neighbours.begin();
-                gbl_idx_it != node_neighbours.end(); ++gbl_idx_it)
+            // If this node might be basal, we find out
+            if(std::any_of(possible_basal_indices.begin(), possible_basal_indices.end(), [&](const unsigned& i){return node_idx == i;}))
             {
-                Node<DIM>* p_other_node = p_mesh->GetNode(*gbl_idx_it);
+                // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
+                const std::vector<unsigned>& node_neighbours = elem_it->GetNode(node_idx)->rGetNeighbours();
 
-                if (p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
+                for(const auto& global_idx : node_neighbours)
                 {
-                    if (p_other_node->GetRegion() == LAMINA_REGION)
+                    Node<DIM> *const p_other_node = p_mesh->GetNode(global_idx);
+
+                    // If the other node is in a lamina, and within the threshold distance, mark our node as basal
+                    if (p_other_node->GetRegion() == LAMINA_REGION &&
+                        p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
                     {
-                        // If it's below the centroid it will be the basal lamina
-                        if (p_this_node->rGetLocation()[1] < centroid[1])
-                        {
-                            // If this is the first such node, it's the candidate for
-                            if (furthest_right_idx == UNSIGNED_UNSET)
-                            {
-                                furthest_right_idx = node_idx;
-                                furthest_left_idx = node_idx;
-                            }
-
-                            p_this_node->SetRegion(node_on_left ? LEFT_BASAL_REGION : RIGHT_BASAL_REGION);
-
-                            double distance_right = p_mesh->GetVectorFromAtoB(centroid, p_this_node->rGetLocation())[0];
-
-                            double dist_furthest_right = p_mesh->GetVectorFromAtoB(centroid, elem_it->GetNode(furthest_right_idx)->rGetLocation())[0];
-                            double dist_furthest_left = p_mesh->GetVectorFromAtoB(centroid, elem_it->GetNode(furthest_left_idx)->rGetLocation())[0];
-
-                            if (distance_right > dist_furthest_right)
-                            {
-                                furthest_right_idx = node_idx;
-                            }
-                            else if (distance_right < dist_furthest_left)
-                            {
-                                furthest_left_idx = node_idx;
-                            }
-                        }
+                        p_this_node->SetRegion(node_on_left ? LEFT_BASAL_REGION : RIGHT_BASAL_REGION);
+                        actual_basal_indices.emplace_back(node_idx);
                         break;
                     }
                 }
             }
         }
 
-        // Use the lowest y-valued node as furthest_left_idx and furthest_right_idx if no basal nodes were identified
-        if (furthest_left_idx == UNSIGNED_UNSET || furthest_right_idx == UNSIGNED_UNSET)
+        // If no basal nodes were tagged, put the lowest node along the long axis in the vector
+        if (actual_basal_indices.empty())
         {
-            unsigned lowest_idx = 0;
+            std::nth_element(partial_sort.begin(), partial_sort.begin(), partial_sort.end(), compare_long_axis);
+            actual_basal_indices.emplace_back(*partial_sort.begin());
+        }
 
-            for (unsigned node_idx = 1; node_idx < num_nodes_elem; ++node_idx)
-            {
-                if (elem_it->GetNode(node_idx)->rGetLocation()[1] < elem_it->GetNode(lowest_idx)->rGetLocation()[1])
-                {
-                    lowest_idx = node_idx;
-                }
-            }
+        auto left_right_basal = std::minmax_element(actual_basal_indices.begin(), actual_basal_indices.end(), compare_short_axis);
+        const unsigned furthest_left_idx = *left_right_basal.first;
+        const unsigned furthest_right_idx = *left_right_basal.second;
 
-            furthest_left_idx = lowest_idx;
-            furthest_right_idx = lowest_idx;
+        if (furthest_left_idx != furthest_right_idx)
+        {
+            elem_it->rGetCornerNodes()[LEFT_BASAL_CORNER] = elem_it->GetNode(furthest_left_idx);
+            elem_it->rGetCornerNodes()[RIGHT_BASAL_CORNER] = elem_it->GetNode(furthest_right_idx);
         }
 
         /*
@@ -148,13 +159,13 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
          */
 
         // If we investigate too many nodes, we have gone too far; this must mean there are no 'free' apical nodes
-        unsigned gone_too_far = static_cast<unsigned>(0.75 * num_nodes_elem);
+        const unsigned gone_too_far = std::lround(0.75 * num_nodes_elem);
 
         // Define apical surface as a number of consecutive nodes that are not neighbours of nodes in other boundaries
         unsigned this_idx = furthest_right_idx;
         unsigned num_right_lat = 0;
         unsigned num_consecutive_misses = 0;
-        while (num_consecutive_misses < 10)
+        while (num_consecutive_misses < std::lround(0.75 * max_basal_nodes))
         {
             this_idx = (this_idx + 1) % num_nodes_elem;
             num_consecutive_misses++;
@@ -180,18 +191,15 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
             const std::vector<unsigned>& node_neighbours = p_this_node->rGetNeighbours();
 
-            for(std::vector<unsigned>::const_iterator gbl_idx_it = node_neighbours.begin();
-                gbl_idx_it != node_neighbours.end(); ++gbl_idx_it)
+            for(const unsigned& gbl_idx : node_neighbours)
             {
-                Node<DIM>* p_other_node = p_mesh->GetNode(*gbl_idx_it);
+                Node<DIM>* p_other_node = p_mesh->GetNode(gbl_idx);
 
-                if (p_mesh->NodesInDifferentElementOrLamina(p_this_node, p_other_node))
+                if (p_mesh->NodesInDifferentElementOrLamina(p_this_node, p_other_node) &&
+                    p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
                 {
-                    if (p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
-                    {
                         num_consecutive_misses = 0;
                         break;
-                    }
                 }
             }
         }
@@ -201,12 +209,16 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         {
             num_right_lat -= num_consecutive_misses;
 
-            unsigned num_lateral = static_cast<unsigned>(0.8 * num_right_lat);
+            const unsigned num_lateral = std::lround(0.8 * num_right_lat);
+            const unsigned num_pa = std::lround(0.9 * num_right_lat);
             for (unsigned i = 0; i < num_right_lat; ++i)
             {
-                unsigned local_idx = (furthest_right_idx + 1 + i) % num_nodes_elem;
-                elem_it->GetNode(local_idx)->SetRegion(i <= num_lateral ? RIGHT_LATERAL_REGION : RIGHT_PERIAPICAL_REGION);
+                const unsigned local_idx = (furthest_right_idx + 1 + i) % num_nodes_elem;
+                elem_it->GetNode(local_idx)->SetRegion(i <= num_lateral ? RIGHT_LATERAL_REGION : i <= num_pa ? RIGHT_PERIAPICAL_REGION : RIGHT_APICAL_REGION);
             }
+
+            const unsigned right_apical_corner_idx = (furthest_right_idx + 1 + num_right_lat) % num_nodes_elem;
+            elem_it->rGetCornerNodes()[RIGHT_APICAL_CORNER] = elem_it->GetNode(right_apical_corner_idx);
         }
 
         /*
@@ -242,18 +254,15 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
             const std::vector<unsigned>& node_neighbours = p_this_node->rGetNeighbours();
 
-            for(std::vector<unsigned>::const_iterator gbl_idx_it = node_neighbours.begin();
-                gbl_idx_it != node_neighbours.end(); ++gbl_idx_it)
+            for(const unsigned& gbl_idx : node_neighbours)
             {
-                Node<DIM>* p_other_node = p_mesh->GetNode(*gbl_idx_it);
+                Node<DIM>* p_other_node = p_mesh->GetNode(gbl_idx);
 
-                if (p_mesh->NodesInDifferentElementOrLamina(p_this_node, p_other_node))
+                if (p_mesh->NodesInDifferentElementOrLamina(p_this_node, p_other_node) &&
+                    p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
                 {
-                    if (p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
-                    {
-                        num_consecutive_misses = 0;
-                        break;
-                    }
+                    num_consecutive_misses = 0;
+                    break;
                 }
             }
         }
@@ -263,12 +272,16 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         {
             num_left_lat -= num_consecutive_misses;
 
-            unsigned num_lateral = static_cast<unsigned>(0.8 * num_left_lat);
+            const unsigned num_lateral = std::lround(0.8 * num_left_lat);
+            const unsigned num_pa = std::lround(0.9 * num_right_lat);
             for (unsigned i = 0; i < num_left_lat; ++i)
             {
                 unsigned local_idx = (furthest_left_idx + num_nodes_elem - i - 1) % num_nodes_elem;
-                elem_it->GetNode(local_idx)->SetRegion(i <= num_lateral ? LEFT_LATERAL_REGION : LEFT_PERIAPICAL_REGION);
+                elem_it->GetNode(local_idx)->SetRegion(i <= num_lateral ? LEFT_LATERAL_REGION : i <= num_pa ? LEFT_PERIAPICAL_REGION : LEFT_APICAL_REGION);
             }
+
+            const unsigned left_apical_corner_idx = (furthest_left_idx + num_nodes_elem - 1 - num_left_lat) % num_nodes_elem;
+            elem_it->rGetCornerNodes()[LEFT_APICAL_CORNER] = elem_it->GetNode(left_apical_corner_idx);
         }
         // If we did go too far, tag all non-basal nodes as left or right based on their orientation about the long axis
         else
@@ -301,13 +314,6 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
 template <unsigned DIM>
 void ContactRegionTaggingModifier<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCellPopulation, std::string outputDirectory)
 {
-}
-
-template <unsigned DIM>
-bool ContactRegionTaggingModifier<DIM>::ComparisonForDistanceMap(std::pair<unsigned, double> idxDistPairA,
-                                                                  std::pair<unsigned, double> idxDistPairB)
-{
-    return idxDistPairA.second < idxDistPairB.second;
 }
 
 template <unsigned DIM>

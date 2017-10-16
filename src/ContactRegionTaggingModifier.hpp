@@ -64,17 +64,6 @@ class ContactRegionTaggingModifier : public AbstractCellBasedSimulationModifier<
         archive& boost::serialization::base_object<AbstractCellBasedSimulationModifier<DIM, DIM> >(*this);
     }
 
-    /**
-     * Helper custom comparison method for UpdateAtEndOfTimeStep(), to sort vector of std::pair<unsigned, double> by
-     * size of the second parameter in each pair. \todo this should be a lambda
-     *
-     * @param idxDistPairA the first pair to compare
-     * @param idxDistPairB the second pair to compare
-     * @return whether pairA.second < pairB.second
-     */
-    static bool ComparisonForDistanceMap(std::pair<unsigned, double> idxDistPairA,
-                                         std::pair<unsigned, double> idxDistPairB);
-
 public:
     /**
      * Default constructor.
@@ -84,7 +73,7 @@ public:
     /**
      * Destructor.
      */
-    virtual ~ContactRegionTaggingModifier();
+    virtual ~ContactRegionTaggingModifier() = default;
 
     /**
      * Overridden UpdateAtEndOfTimeStep() method.
