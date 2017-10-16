@@ -172,7 +172,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             num_right_lat++;
 
             // Avoid problems near the basal corners by always accepting the fist few nodes
-            if (num_right_lat < 15)
+            if (num_right_lat < std::lround(0.25 * num_nodes_elem))
             {
                 num_consecutive_misses = 0;
                 continue;
@@ -235,7 +235,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             num_left_lat++;
 
             // Avoid problems near the basal corners by always accepting the fist few nodes
-            if (num_left_lat < 15)
+            if (num_left_lat < std::lround(0.25 * num_nodes_elem))
             {
                 num_consecutive_misses = 0;
                 continue;
