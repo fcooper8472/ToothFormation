@@ -35,6 +35,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "VarAdhesionMorseMembraneForce.hpp"
 #include "ImmersedBoundaryEnumerations.hpp"
+#include "UblasVectorInclude.hpp"
 
 template <unsigned DIM>
 VarAdhesionMorseMembraneForce<DIM>::VarAdhesionMorseMembraneForce()
@@ -46,11 +47,6 @@ VarAdhesionMorseMembraneForce<DIM>::VarAdhesionMorseMembraneForce()
           mApicalWellDepthMult(1.0),
           mWellWidth(0.25),
           mStiffnessMult(1.0)
-{
-}
-
-template <unsigned DIM>
-VarAdhesionMorseMembraneForce<DIM>::~VarAdhesionMorseMembraneForce()
 {
 }
 
@@ -85,8 +81,8 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
                                                                   double intrinsicSpacingSquared)
 {
     // Get index and number of nodes of current element
-    unsigned elem_idx = rElement.GetIndex();
-    unsigned num_nodes = rElement.GetNumNodes();
+    const unsigned elem_idx = rElement.GetIndex();
+    const unsigned num_nodes = rElement.GetNumNodes();
 
     unsigned elem_region = 0;
     assert(rCellPopulation.GetNumElements() % 3 == 0);
@@ -102,7 +98,6 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
     {
         elem_region = 3;
     }
-
 
     // Make a vector to store the force on node i+1 from node i
     std::vector<c_vector<double, DIM> > force_to_next(num_nodes);
@@ -154,7 +149,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         // Index of the next node, calculated modulo number of nodes in this element
         unsigned next_idx = (node_idx + 1) % num_nodes;
 
-        // If element rather than lamina, calculate the stuffness multiplier
+        // If element rather than lamina, calculate the stiffness multiplier
         double stiffness_mult = CalculateStiffnessMult(elem_region, rElement.GetNode(node_idx)->GetRegion());
 
         // Morse force (derivative of Morse potential wrt distance between nodes
@@ -177,6 +172,50 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         // Add the aggregate force contribution to the node
         rElement.GetNode(node_idx)->AddAppliedForceContribution(aggregate_force);
     }
+
+    // Add contributions from corner nodes of middle cells, if all corners are defined
+    if (elem_region == 1u)
+    {
+        auto& rCorners = rElement.rGetCornerNodes();
+
+        if (std::any_of(rCorners.begin(), rCorners.end(), [](Node<DIM> *a) { return a == nullptr; }))
+        {
+            EXCEPTION("At least one corner of a central cell is not defined.");
+        }
+
+        constexpr double width = 0.9 * 1.0 / 15.0;
+        constexpr double height = 2.0 * width;
+        const double factor = 0.15;
+
+        Node<DIM>* const p_lt_ap = rCorners[LEFT_APICAL_CORNER];
+        Node<DIM>* const p_rt_ap = rCorners[RIGHT_APICAL_CORNER];
+        Node<DIM>* const p_lt_ba = rCorners[LEFT_BASAL_CORNER];
+        Node<DIM>* const p_rt_ba = rCorners[RIGHT_BASAL_CORNER];
+
+        auto left_vec = p_lt_ap->rGetLocation() - p_lt_ba->rGetLocation();
+        const double len_1 = norm_2(left_vec);
+        const auto force_1 = factor * (len_1 - height) * mElementWellDepth * left_vec / len_1;
+        p_lt_ap->AddAppliedForceContribution(-force_1);
+        p_lt_ba->AddAppliedForceContribution(force_1);
+
+        auto right_vec = p_rt_ap->rGetLocation() - p_rt_ba->rGetLocation();
+        const double len_2 = norm_2(right_vec);
+        const auto force_2 = factor * (len_2 - height) * mElementWellDepth * right_vec / len_2;
+        p_rt_ap->AddAppliedForceContribution(-force_2);
+        p_rt_ba->AddAppliedForceContribution(force_2);
+
+        auto top_vec = p_lt_ap->rGetLocation() - p_rt_ap->rGetLocation();
+        const double len_3 = norm_2(top_vec);
+        const auto force_3 = factor * (len_3 - width) * mElementWellDepth * top_vec / len_3;
+        p_lt_ap->AddAppliedForceContribution(-force_3);
+        p_rt_ap->AddAppliedForceContribution(force_3);
+
+        auto bot_vec = p_lt_ba->rGetLocation() - p_rt_ba->rGetLocation();
+        const double len_4 = norm_2(bot_vec);
+        const auto force_4 = factor * (len_4 - width) * mElementWellDepth * bot_vec / len_4;
+        p_lt_ba->AddAppliedForceContribution(-force_4);
+        p_rt_ba->AddAppliedForceContribution(force_4);
+    }
 }
 
 template<unsigned DIM>
@@ -187,7 +226,7 @@ double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(unsigned elem_
     // Left
     if (elem_region == 0)
     {
-        if (node_region == RIGHT_APICAL_REGION || node_region == RIGHT_PERIAPICAL_REGION)
+        if (node_region == RIGHT_APICAL_REGION)// || node_region == RIGHT_PERIAPICAL_REGION)
         {
             stiffness_mult = mStiffnessMult;
         }
@@ -195,13 +234,18 @@ double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(unsigned elem_
     // Right
     else if (elem_region == 2)
     {
-        if (node_region == LEFT_APICAL_REGION || node_region == LEFT_PERIAPICAL_REGION)
+        if (node_region == LEFT_APICAL_REGION)// || node_region == LEFT_PERIAPICAL_REGION)
         {
             stiffness_mult = mStiffnessMult;
         }
     }
+    // Centre
+    else if (elem_region == 1)
+    {
+        stiffness_mult = 1.2;
+    }
 
-    return  stiffness_mult;
+    return stiffness_mult;
 }
 
 template <unsigned DIM>

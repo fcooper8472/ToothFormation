@@ -121,7 +121,7 @@ public:
     VarAdhesionMorseMembraneForce();
 
     /** Destructor */
-    virtual ~VarAdhesionMorseMembraneForce();
+    virtual ~VarAdhesionMorseMembraneForce() = default;
 
     /**
      * Overridden AddImmersedBoundaryForceContribution() method.
