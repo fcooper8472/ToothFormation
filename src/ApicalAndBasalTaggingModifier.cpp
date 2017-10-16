@@ -155,13 +155,61 @@ void ApicalAndBasalTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopul
             }
         }
 
-        // Exception (for now) if no nodes were tagged as being near either the basal or apical lamina
+        if (ltmost_basal_idx == UNSIGNED_UNSET)
+        {
+            // Either both or neither basal indices should be unset
+            assert(rtmost_basal_idx == UNSIGNED_UNSET);
+
+            // Assign the lowest (y-position) node as being basal
+            double lowest_y_pos = DBL_MAX;
+            unsigned lowest_idx = UNSIGNED_UNSET;
+
+            for (unsigned node_idx = 0; node_idx < elem_it->GetNumNodes(); ++node_idx)
+            {
+                double local_y_pos = elem_it->GetNode(node_idx)->rGetLocation()[1];
+                if (local_y_pos < lowest_y_pos)
+                {
+                    lowest_y_pos = local_y_pos;
+                    lowest_idx = node_idx;
+                }
+            }
+
+            elem_it->GetNode(lowest_idx)->SetRegion(LEFT_BASAL_REGION);
+            ltmost_basal_idx = lowest_idx;
+            rtmost_basal_idx = lowest_idx;
+        }
+
+        if (rtmost_apical_idx == UNSIGNED_UNSET)
+        {
+            // Either both or neither basal indices should be unset
+            assert(ltmost_apical_idx == UNSIGNED_UNSET);
+
+            // Assign the highest (y-position) node as being apical
+            double highest_y_pos = -DBL_MAX;
+            unsigned highest_idx = UNSIGNED_UNSET;
+
+            for (unsigned node_idx = 0; node_idx < elem_it->GetNumNodes(); ++node_idx)
+            {
+                double local_y_pos = elem_it->GetNode(node_idx)->rGetLocation()[1];
+                if (local_y_pos > highest_y_pos)
+                {
+                    highest_y_pos = local_y_pos;
+                    highest_idx = node_idx;
+                }
+            }
+
+            elem_it->GetNode(highest_idx)->SetRegion(LEFT_APICAL_REGION);
+            ltmost_apical_idx = highest_idx;
+            rtmost_apical_idx = highest_idx;
+        }
+
+        // This should never be reached as the loops above take care of the case when there is nothing near the laminas
         if (ltmost_basal_idx == UNSIGNED_UNSET ||
             rtmost_basal_idx == UNSIGNED_UNSET ||
             rtmost_apical_idx == UNSIGNED_UNSET ||
             ltmost_apical_idx == UNSIGNED_UNSET)
         {
-            EXCEPTION("Nothing near the basal lamina?");
+            NEVER_REACHED;
         }
 
         unsigned num_nodes_right = (num_nodes_elem + rtmost_apical_idx - rtmost_basal_idx - 1) % num_nodes_elem;
