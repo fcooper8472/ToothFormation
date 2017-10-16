@@ -30,7 +30,7 @@ except ImportError as e:
 chaste_build_dir = os.environ.get('CHASTE_BUILD_DIR')
 chaste_test_dir = os.environ.get('CHASTE_TEST_OUTPUT')
 
-executable = os.path.join(chaste_build_dir, 'projects/ToothFormation/apps', 'Exe_BendingThreeRegion')
+executable = os.path.join(chaste_build_dir, 'projects/ToothFormation/apps', 'RapidPrototyping')
 path_to_output = os.path.join(chaste_test_dir, 'tooth_formation', 'Exe_BendingThreeRegion')
 path_to_sims = os.path.join(path_to_output, 'sim')
 path_to_movies = os.path.join(path_to_output, 'movies')
@@ -51,16 +51,16 @@ today = time.strftime('%Y-%m-%dT%H%M')
 # Param ranges (in lists, for itertools product)
 crl = [0.25]
 csc = np.linspace(1.6 * 1e8, 2.0 * 1e8, num=1)
-trl = [0.4]  # multiple of the interaction distance
-tsc = np.linspace(0.5 * 1e7, 1.0 * 1e7, num=1)
-kfs = np.linspace(1.0 * 1e1, 1.0 * 1e3, num=3)
+trl = [0.25]  # multiple of the interaction distance
+tsc = np.linspace(1.0 * 1e7, 1.4 * 1e7, num=1)
+kfs = np.linspace(1.0, 3.0, num=1)
 alm = np.linspace(0.1, 0.2, num=1)
-di = [0.02]
-sm = np.linspace(0.2, 0.2, num=1)
+di = np.linspace(0.02, 0.05, num=1)
+sm = np.linspace(0.4, 0.6, num=2)
 ns = [0.00]
 rf = [50]
 ts = [10000]
-al = [True]
+al = [False]
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
 combined_iterable = list(itertools.product(crl, csc, trl, tsc, kfs, alm, di, sm, ns, rf, ts, al))
@@ -156,7 +156,7 @@ def make_movies_parallel():
             quit('Py: Could not determine simulation index from directory string: ' + data_dir)
         idx = int(index_match.group(1))
 
-        command_list.append((data_dir, str(idx).zfill(2) + '.mp4', 10.0, False))
+        command_list.append((data_dir, str(idx).zfill(2) + '.mp4', 8.0, False))
 
     # Generate a pool of workers
     pool = mp.Pool(processes=mp.cpu_count())

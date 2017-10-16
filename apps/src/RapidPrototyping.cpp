@@ -54,6 +54,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OffLatticeSimulation.hpp"
 #include "ThreeRegionShearForce.hpp"
 #include "ThreeRegionSvgWriter.hpp"
+#include "ThreeRegionInteractionForces.hpp"
 #include "TransitCellProliferativeType.hpp"
 #include "VarAdhesionMorseMembraneForce.hpp"
 
@@ -215,32 +216,37 @@ void SetupAndRunSimulation()
     p_boundary_force->SetStiffnessMult(stiffness_mult);
 //    SetLaminaWellDepthMult(1.0 + 0.4 * (std::strtod(idString.c_str(), nullptr)));
 
-    auto p_shear_force = boost::make_shared<ThreeRegionShearForce<2>>();
-    p_main_modifier->AddImmersedBoundaryForce(p_shear_force);
-    p_shear_force->SetSpringConst(kin_feedback_str);
+//    auto p_shear_force = boost::make_shared<ThreeRegionShearForce<2>>();
+//    p_main_modifier->AddImmersedBoundaryForce(p_shear_force);
+//    p_shear_force->SetSpringConst(kin_feedback_str);
 
-//    auto p_cell_cell_force = boost::make_shared<ImmersedBoundaryMorseInteractionForce<2>>();
-//    p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-//    p_cell_cell_force->SetWellDepth(tra_spring_const);
-//    p_cell_cell_force->SetRestLength(interaction_dist * tra_rest_length);
+    auto p_cell_cell_force = boost::make_shared<ThreeRegionInteractionForces<2>>();
+    p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
+
+
+    p_cell_cell_force->SetBasicInteractionStrength(tra_spring_const);
+    p_cell_cell_force->SetBasicInteractionDist(interaction_dist * tra_rest_length);
+
 //    p_cell_cell_force->SetLaminaRestLengthMult(2.0);
 //    p_cell_cell_force->SetLaminaWellDepthMult(2.0);
-//    p_cell_cell_force->SetAdditiveNormalNoise(true);
+
+//    p_cell_cell_force->SetAdditiveNormalNoise(false);
 //    p_cell_cell_force->SetNormalNoiseMean(0.0);
 //    p_cell_cell_force->SetNormalNoiseStdDev(normal_std);
+    p_cell_cell_force->SetAdhesionMultiplier(2.0);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
     output_directory << "tooth_formation/Exe_BendingThreeRegion/sim/" << id_string;
     simulator.SetOutputDirectory(output_directory.str());
 
-    // Calculate sampling multiple to have at least 5 frames per second on a 10 second video
-    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (10.0 * 2.0))));
+    // Calculate sampling multiple to have at least 5 frames per second on a 8 second video
+    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (8.0 * 5.0))));
 
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(UINT_MAX);
+    simulator.SetSamplingTimestepMultiple(10u);
     simulator.SetEndTime(num_time_steps * dt);
     p_svg_writer->SetSamplingMultiple(sampling_multiple);
 
