@@ -114,9 +114,10 @@ int main(int argc, char* argv[])
 
     // Get ID string from command line
     std::string id_string = gVariablesMap["ID"].as<std::string>();
+    unsigned id_val = std::stoi(id_string);
 
     std::cout << "Starting simulation with ID string " << id_string << std::endl;
-    SetupSingletons(0u);
+    SetupSingletons(id_val);
     SetupAndRunSimulation();
     DestroySingletons();
     std::cout << "Completed simulation with ID string " << id_string << std::endl;
@@ -214,26 +215,17 @@ void SetupAndRunSimulation()
     p_boundary_force->SetLaminaRestLength(cor_rest_length);
     p_boundary_force->SetApicalWellDepthMult(apical_lam_mult);
     p_boundary_force->SetStiffnessMult(stiffness_mult);
-//    SetLaminaWellDepthMult(1.0 + 0.4 * (std::strtod(idString.c_str(), nullptr)));
-
-//    auto p_shear_force = boost::make_shared<ThreeRegionShearForce<2>>();
-//    p_main_modifier->AddImmersedBoundaryForce(p_shear_force);
-//    p_shear_force->SetSpringConst(kin_feedback_str);
 
     auto p_cell_cell_force = boost::make_shared<ThreeRegionInteractionForces<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
-
-
     p_cell_cell_force->SetBasicInteractionStrength(tra_spring_const);
     p_cell_cell_force->SetBasicInteractionDist(interaction_dist * tra_rest_length);
-
-//    p_cell_cell_force->SetLaminaRestLengthMult(2.0);
-//    p_cell_cell_force->SetLaminaWellDepthMult(2.0);
-
-//    p_cell_cell_force->SetAdditiveNormalNoise(false);
-//    p_cell_cell_force->SetNormalNoiseMean(0.0);
-//    p_cell_cell_force->SetNormalNoiseStdDev(normal_std);
     p_cell_cell_force->SetAdhesionMultiplier(2.0);
+
+    // Add some noise to the
+    p_cell_cell_force->SetAdditiveNormalNoise(true);
+    p_cell_cell_force->SetNormalNoiseMean(0.0);
+    p_cell_cell_force->SetNormalNoiseStdDev(normal_std);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
@@ -241,7 +233,7 @@ void SetupAndRunSimulation()
     simulator.SetOutputDirectory(output_directory.str());
 
     // Calculate sampling multiple to have at least 5 frames per second on a 8 second video
-    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (8.0 * 5.0))));
+    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (1.0 * 5.0))));
 
     // Set simulation properties
     double dt = 0.01;

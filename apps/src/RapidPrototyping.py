@@ -56,11 +56,11 @@ tsc = np.linspace(1.0 * 1e7, 1.4 * 1e7, num=1)
 kfs = np.linspace(1.0, 3.0, num=1)
 alm = np.linspace(0.1, 0.2, num=1)
 di = np.linspace(0.02, 0.05, num=1)
-sm = np.linspace(0.4, 0.6, num=2)
-ns = [0.00]
+sm = np.linspace(1.0, 0.5, num=6)
+ns = [0.03]
 rf = [50]
-ts = [10000]
-al = [False]
+ts = [4000]
+al = [False]*5
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
 combined_iterable = list(itertools.product(crl, csc, trl, tsc, kfs, alm, di, sm, ns, rf, ts, al))

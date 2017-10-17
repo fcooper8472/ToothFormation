@@ -193,6 +193,11 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
             }
         }
     }
+
+    if (this->mAdditiveNormalNoise)
+    {
+        this->AddNormalNoiseToNodes(rCellPopulation);
+    }
 }
 
 template<unsigned DIM>
@@ -242,23 +247,32 @@ double ThreeRegionInteractionForces<DIM>::CalculateElementTypeMult(Node<DIM>* pN
     unsigned region_a = pNodeA->GetRegion();
     unsigned region_b = pNodeB->GetRegion();
 
-    if (elem_type_a == THREE_REGION_LEFT || elem_type_a == THREE_REGION_RIGHT)
+    if (region_a == RIGHT_APICAL_REGION || region_a == RIGHT_PERIAPICAL_REGION ||
+        region_a == LEFT_APICAL_REGION || region_a == LEFT_PERIAPICAL_REGION)
     {
-        if (region_a == RIGHT_APICAL_REGION || region_a == RIGHT_PERIAPICAL_REGION ||
-            region_a == LEFT_APICAL_REGION || region_a == LEFT_PERIAPICAL_REGION)
-        {
-            type_mult = mAdhesionMultiplier;
-        }
+        type_mult = mAdhesionMultiplier;
     }
 
-    if (elem_type_b == THREE_REGION_LEFT || elem_type_b == THREE_REGION_RIGHT)
+    if (region_b == RIGHT_APICAL_REGION || region_b == RIGHT_PERIAPICAL_REGION ||
+        region_b == LEFT_APICAL_REGION || region_b == LEFT_PERIAPICAL_REGION)
     {
-        if (region_b == RIGHT_APICAL_REGION || region_b == RIGHT_PERIAPICAL_REGION ||
-            region_b == LEFT_APICAL_REGION || region_b == LEFT_PERIAPICAL_REGION)
-        {
-            type_mult = mAdhesionMultiplier;
-        }
+        type_mult = mAdhesionMultiplier;
     }
+//    if (elem_type_a == THREE_REGION_MID)
+//    {
+//        if (region_a == LEFT_BASAL_REGION || region_a == RIGHT_BASAL_REGION)
+//        {
+//            type_mult = 2.0;
+//        }
+//    }
+//
+//    if (elem_type_b == THREE_REGION_MID)
+//    {
+//        if (region_b == LEFT_BASAL_REGION || region_b == RIGHT_BASAL_REGION)
+//        {
+//            type_mult = 2.0;
+//        }
+//    }
 
     return type_mult;
 }
