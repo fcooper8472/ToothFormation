@@ -49,10 +49,32 @@ ContactRegionTaggingModifier<DIM>::ContactRegionTaggingModifier()
 template <unsigned DIM>
 void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM, DIM>& rCellPopulation)
 {
+    auto p_cell_pop = static_cast<ImmersedBoundaryCellPopulation<DIM>*>(&rCellPopulation);
     auto p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM>*>(&(rCellPopulation.rGetMesh()));
 
-    // Just get this once \todo: can this magic number be removed?
-    const double nbr_dist = 4.0 * p_mesh->GetNeighbourDist();
+    /*
+     * Annoyingly, we need a deep copy of the nodes for the private box collection because the neighbours are added
+     * directly to the nodes, and we cannot overwrite the data used for mechanical interactions in the system.
+     *
+     * The neighbours of these copied nodes will be used when determining node regions, which requires a longer
+     * length-scale than mechanical interactions.
+     */
+    std::vector<Node<DIM>*> copy_of_nodes;
+    copy_of_nodes.reserve(p_mesh->GetNumNodes());
+    for (const auto& p_node : p_mesh->rGetNodes())
+    {
+        copy_of_nodes.push_back(new Node<DIM>(p_node->GetIndex(), p_node->rGetLocation(), true));
+    }
+
+    // Verify (for now) that node indices are contiguous and ordered 0, ..., N-1
+    std::sort(copy_of_nodes.begin(), copy_of_nodes.end(),
+              [](Node<DIM>* a, Node<DIM>* b) -> bool {return a->GetIndex() < b->GetIndex();});
+
+    EXCEPT_IF_NOT(copy_of_nodes.size() == copy_of_nodes.back()->GetIndex() + 1u);
+
+    // Update the box collection
+    std::vector<std::pair<Node<DIM>*, Node<DIM>*> > unused_node_pairs;
+    mpBoxCollection->CalculateNodePairs(copy_of_nodes, unused_node_pairs);
 
     // Iterate over elements
     for (auto elem_it = p_mesh->GetElementIteratorBegin(); elem_it != p_mesh->GetElementIteratorEnd(); ++elem_it)
@@ -119,6 +141,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             if(std::any_of(possible_basal_indices.begin(), possible_basal_indices.end(), [&](const unsigned& i){return node_idx == i;}))
             {
                 // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
+                // This is the mechanical interaction distance, so is the neighbours of the real nodes, not our copies
                 const std::vector<unsigned>& node_neighbours = elem_it->GetNode(node_idx)->rGetNeighbours();
 
                 for(const auto& global_idx : node_neighbours)
@@ -127,7 +150,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
 
                     // If the other node is in a lamina, and within the threshold distance, mark our node as basal
                     if (p_other_node->GetRegion() == LAMINA_REGION &&
-                        p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
+                        p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < p_cell_pop->GetInteractionDistance())
                     {
                         p_this_node->SetRegion(node_on_left ? LEFT_BASAL_REGION : RIGHT_BASAL_REGION);
                         actual_basal_indices.emplace_back(node_idx);
@@ -165,14 +188,14 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         unsigned this_idx = furthest_right_idx;
         unsigned num_right_lat = 0;
         unsigned num_consecutive_misses = 0;
-        while (num_consecutive_misses < std::lround(0.75 * max_basal_nodes))
+        while (num_consecutive_misses < 3u)
         {
             this_idx = (this_idx + 1) % num_nodes_elem;
             num_consecutive_misses++;
             num_right_lat++;
 
             // Avoid problems near the basal corners by always accepting the fist few nodes
-            if (num_right_lat < std::lround(0.25 * num_nodes_elem))
+            if (num_right_lat < std::lround(0.1 * num_nodes_elem))
             {
                 num_consecutive_misses = 0;
                 continue;
@@ -188,15 +211,15 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             // If we get to here, we actually have to check the node neighbours!
             Node<DIM>* p_this_node = elem_it->GetNode(this_idx);
 
-            // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
-            const std::vector<unsigned>& node_neighbours = p_this_node->rGetNeighbours();
+            // We need the larger box-collection information, as these are not mechanical interactions.
+            const std::vector<unsigned>& node_neighbours = copy_of_nodes[p_this_node->GetIndex()]->rGetNeighbours();
 
             for(const unsigned& gbl_idx : node_neighbours)
             {
                 Node<DIM>* p_other_node = p_mesh->GetNode(gbl_idx);
 
                 if (p_mesh->NodesInDifferentElementOrLamina(p_this_node, p_other_node) &&
-                    p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
+                    p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < mInteractionDist)
                 {
                         num_consecutive_misses = 0;
                         break;
@@ -252,14 +275,14 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             Node<DIM>* p_this_node = elem_it->GetNode(this_idx);
 
             // The vec of node neighbours includes all within neighbouring boxes: need to check against neighbour dist
-            const std::vector<unsigned>& node_neighbours = p_this_node->rGetNeighbours();
+            const std::vector<unsigned>& node_neighbours = copy_of_nodes[p_this_node->GetIndex()]->rGetNeighbours();
 
             for(const unsigned& gbl_idx : node_neighbours)
             {
                 Node<DIM>* p_other_node = p_mesh->GetNode(gbl_idx);
 
                 if (p_mesh->NodesInDifferentElementOrLamina(p_this_node, p_other_node) &&
-                    p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < nbr_dist)
+                    p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < mInteractionDist)
                 {
                     num_consecutive_misses = 0;
                     break;
@@ -309,11 +332,30 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             }
         }
     }
+
+    // Tidy up out copied nodes
+    for (const auto& p_node : copy_of_nodes)
+    {
+        delete p_node;
+    }
 }
 
 template <unsigned DIM>
 void ContactRegionTaggingModifier<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCellPopulation, std::string outputDirectory)
 {
+    // Fist, decide how big the interaction distance must be.  Make an educated guess based on number of cells.
+    const double rough_cell_width = 1.0 / rCellPopulation.GetNumAllCells();
+    mInteractionDist = 0.25 * rough_cell_width;  // this is a bit of a guess
+
+    // Set up the box collection
+    c_vector<double, 2 * 2> domain_size;
+    domain_size(0) = 0.0;
+    domain_size(1) = 1.0;
+    domain_size(2) = 0.0;
+    domain_size(3) = 1.0;
+
+    mpBoxCollection = new ObsoleteBoxCollection<DIM>(mInteractionDist, domain_size, true, true);
+    mpBoxCollection->SetupLocalBoxesHalfOnly();
 }
 
 template <unsigned DIM>

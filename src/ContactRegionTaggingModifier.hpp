@@ -40,7 +40,8 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ChasteSerialization.hpp"
 
 #include "AbstractCellPopulation.hpp"
-#include "cell_based/src/simulation/modifiers/AbstractCellBasedSimulationModifier.hpp"
+#include "AbstractCellBasedSimulationModifier.hpp"
+#include "ObsoleteBoxCollection.hpp"
 
 /**
  * A modifier that tags node regions as being apical, periapical, lateral, or basal, based on proximity to neighbouring
@@ -49,6 +50,12 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template <unsigned DIM>
 class ContactRegionTaggingModifier : public AbstractCellBasedSimulationModifier<DIM, DIM>
 {
+    /** The interaction distance for the purposes of region tagging */
+    double mInteractionDist;
+
+    /** A box collection to efficiently keep track of node neighbours */
+    ObsoleteBoxCollection<DIM>* mpBoxCollection;
+
     /** Needed for serialization. */
     friend class boost::serialization::access;
     /**
