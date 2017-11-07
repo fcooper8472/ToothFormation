@@ -173,6 +173,8 @@ void SetupAndRunSimulation()
     ImmersedBoundaryPalisadeMeshGenerator gen(15u, 128u, 0.05, 2.0, 0.0, true, apical_lamina, false, 192u);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
+    std::array<unsigned, 3> region_sizes = {{7u, 1u, 7u}};
+
     std::cout << p_mesh->GetSpacingRatio() << std::endl;
 
     std::vector<CellPtr> cells;
@@ -195,6 +197,7 @@ void SetupAndRunSimulation()
     simulator.AddSimulationModifier(p_main_modifier);
 
     auto p_svg_writer = boost::make_shared<ThreeRegionSvgWriter<2>>();
+    p_svg_writer->SetRegionSizes(region_sizes);
     simulator.AddSimulationModifier(p_svg_writer);
 
     if (apical_lamina)
@@ -215,12 +218,14 @@ void SetupAndRunSimulation()
     p_boundary_force->SetLaminaRestLength(cor_rest_length);
     p_boundary_force->SetApicalWellDepthMult(apical_lam_mult);
     p_boundary_force->SetStiffnessMult(stiffness_mult);
+    p_boundary_force->SetRegionSizes(region_sizes);
 
     auto p_cell_cell_force = boost::make_shared<ThreeRegionInteractionForces<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
     p_cell_cell_force->SetBasicInteractionStrength(tra_spring_const);
     p_cell_cell_force->SetBasicInteractionDist(interaction_dist * tra_rest_length);
     p_cell_cell_force->SetAdhesionMultiplier(2.0);
+    p_cell_cell_force->SetRegionSizes(region_sizes);
 
     // Add some noise to the
     p_cell_cell_force->SetAdditiveNormalNoise(true);

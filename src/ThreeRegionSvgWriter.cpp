@@ -43,7 +43,8 @@ ThreeRegionSvgWriter<DIM>::ThreeRegionSvgWriter()
           mSvgSize(1600.0),
           mOutputDirectory(""),
           mSvgHeader(""),
-          mSvgFooter("")
+          mSvgFooter(""),
+          mRegionSizes()
 {
 }
 
@@ -89,11 +90,21 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
             c_vector<double, 2> short_axis = p_mesh->GetShortAxisOfElement(it->GetIndex());
             short_axis = short_axis[0] < 0.0 ? short_axis : -short_axis;
 
+            unsigned region = 2u;
+            if (it->GetIndex() < mRegionSizes[0])
+            {
+                region = 0u;
+            }
+            else if (it->GetIndex() < mRegionSizes[0] + mRegionSizes[1])
+            {
+                region = 1u;
+            }
+
             int angle = 90 + static_cast<int>(atan2(short_axis[0], short_axis[1]) * 180.0 / M_PI);
 
             AddGlyphToSvgFile(svg_file,
                               p_mesh->GetCentroidOfElement(it->GetIndex()),
-                              static_cast<unsigned>(std::floor(it->GetIndex() / (double)num_elems_per_region)),
+                              region,
                               glyph_rad,
                               p_mesh->GetElongationShapeFactorOfElement(it->GetIndex()),
                               angle);
@@ -171,6 +182,12 @@ void ThreeRegionSvgWriter<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCe
 
     mSvgHeader = header.str();
     mSvgFooter = "</svg>\n";
+
+    ImmersedBoundaryMesh<DIM, DIM>* p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM> *>(&(rCellPopulation.rGetMesh()));
+    if (std::accumulate(mRegionSizes.begin(), mRegionSizes.end(), 0u) != p_mesh->GetNumElements())
+    {
+        EXCEPTION("mRegionSizes must be set to the correct number of elements");
+    }
 }
 
 template <unsigned DIM>
@@ -307,6 +324,18 @@ template <unsigned DIM>
 void ThreeRegionSvgWriter<DIM>::SetSvgSize(double svgSize)
 {
     mSvgSize = svgSize;
+}
+
+template <unsigned DIM>
+const std::array<unsigned int, 3>& ThreeRegionSvgWriter<DIM>::GetRegionSizes() const
+{
+    return mRegionSizes;
+}
+
+template <unsigned DIM>
+void ThreeRegionSvgWriter<DIM>::SetRegionSizes(const std::array<unsigned int, 3>& regionSizes)
+{
+    mRegionSizes = regionSizes;
 }
 
 // Explicit instantiation

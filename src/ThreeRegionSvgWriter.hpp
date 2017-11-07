@@ -64,6 +64,12 @@ class ThreeRegionSvgWriter : public AbstractCellBasedSimulationModifier<DIM, DIM
     /** The svg file footer, which will be constant for a given simulation */
     std::string mSvgFooter;
 
+    /**
+     * Array representing the number of elements in each of the three regions
+     */
+    std::array<unsigned, 3> mRegionSizes;
+
+
     /** Needed for serialization. */
     friend class boost::serialization::access;
     /**
@@ -159,6 +165,12 @@ public:
 
     /** @param svgSize the new value of mSvgSize */
     void SetSvgSize(double svgSize);
+
+    /** @return mRegionSizes */
+    const std::array<unsigned int, 3>& GetRegionSizes() const;
+
+    /** @param regionSizes the new value of mRegionSizes */
+    void SetRegionSizes(const std::array<unsigned int, 3>& regionSizes);
 };
 
 #include "SerializationExportWrapper.hpp"

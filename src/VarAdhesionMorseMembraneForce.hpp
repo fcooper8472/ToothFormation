@@ -95,6 +95,11 @@ private:
     double mStiffnessMult;
 
     /**
+     * Array representing the number of elements in each of the three regions
+     */
+    std::array<unsigned, 3> mRegionSizes;
+
+    /**
      * Helper method for CalculateForcesOnElement().
      * Determine whether to modify stiffness, based on the elem region and node region.
      * @param elem_region the elem region (left, centre, right, membrane)
@@ -180,6 +185,12 @@ public:
 
     /** @param stiffnessMult the new value of mStiffnessMult */
     void SetStiffnessMult(double stiffnessMult);
+
+    /** @return mRegionSizes */
+    const std::array<unsigned int, 3>& GetRegionSizes() const;
+
+    /** @param regionSizes the new value of  mRegionSizes */
+    void SetRegionSizes(const std::array<unsigned int, 3>& regionSizes);
 };
 
 #include "SerializationExportWrapper.hpp"

@@ -54,6 +54,13 @@ template <unsigned DIM>
 void VarAdhesionMorseMembraneForce<DIM>::AddImmersedBoundaryForceContribution(std::vector<std::pair<Node<DIM>*, Node<DIM>*> >& rNodePairs,
                                                                               ImmersedBoundaryCellPopulation<DIM>& rCellPopulation)
 {
+
+    auto p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM> *>(&(rCellPopulation.rGetMesh()));
+    if (std::accumulate(mRegionSizes.begin(), mRegionSizes.end(), 0u) != p_mesh->GetNumElements())
+    {
+        EXCEPTION("mRegionSizes must be set to the correct number of elements");
+    }
+
     // Data common across the entire cell population
     double intrinsicSpacingSquared = rCellPopulation.GetIntrinsicSpacing() * rCellPopulation.GetIntrinsicSpacing();
 
@@ -84,16 +91,18 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
     const unsigned elem_idx = rElement.GetIndex();
     const unsigned num_nodes = rElement.GetNumNodes();
 
-    unsigned elem_region = 0;
-    assert(rCellPopulation.GetNumElements() % 3 == 0);
-    if (rElement.GetIndex() >= rCellPopulation.GetNumElements() / 3)
+
+
+    unsigned elem_region = 2u;
+    if (rElement.GetIndex() < mRegionSizes[0])
+    {
+        elem_region = 0;
+    }
+    else if (rElement.GetIndex() < mRegionSizes[0] + mRegionSizes[1])
     {
         elem_region = 1;
     }
-    if (rElement.GetIndex() >= 2 * (rCellPopulation.GetNumElements() / 3))
-    {
-        elem_region = 2;
-    }
+
     if (ELEMENT_DIM != DIM)
     {
         elem_region = 3;
@@ -343,6 +352,18 @@ template <unsigned DIM>
 void VarAdhesionMorseMembraneForce<DIM>::SetStiffnessMult(double stiffnessMult)
 {
     mStiffnessMult = stiffnessMult;
+}
+
+template<unsigned DIM>
+const std::array<unsigned int, 3>& VarAdhesionMorseMembraneForce<DIM>::GetRegionSizes() const
+{
+    return mRegionSizes;
+}
+
+template<unsigned DIM>
+void VarAdhesionMorseMembraneForce<DIM>::SetRegionSizes(const std::array<unsigned int, 3>& regionSizes)
+{
+    mRegionSizes = regionSizes;
 }
 
 // Explicit instantiation

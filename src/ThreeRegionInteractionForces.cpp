@@ -43,7 +43,8 @@ ThreeRegionInteractionForces<DIM>::ThreeRegionInteractionForces()
           mElemAttributeLocation(UNSIGNED_UNSET),
           mBasicInteractionStrength(1e3),
           mBasicInteractionDist(DOUBLE_UNSET),
-          mAdhesionMultiplier(2.0)
+          mAdhesionMultiplier(2.0),
+          mRegionSizes()
 {
 }
 
@@ -88,25 +89,25 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
         // Define the location in the element attributes vector
         mElemAttributeLocation = num_elem_attributes;
 
-        unsigned elems_per_region = (mpMesh->GetNumElements()) / 3;
-
-        // Set up cell types for each element
-        unsigned running_elem_idx = 0;
-
-        for (unsigned elem_idx = 0; elem_idx < elems_per_region; elem_idx++)
+        if (std::accumulate(mRegionSizes.begin(), mRegionSizes.end(), 0u) != mpMesh->GetNumElements())
         {
-            mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_LEFT);
-            running_elem_idx++;
+            EXCEPTION("mRegionSizes must be set to the correct number of elements");
         }
-        for (unsigned elem_idx = 0; elem_idx < elems_per_region; elem_idx++)
+
+        std::array<unsigned, 3> region_size_sums;
+        std::partial_sum(mRegionSizes.begin(), mRegionSizes.end(), region_size_sums.begin());
+
+        for (unsigned elem_idx = 0; elem_idx < region_size_sums[0]; elem_idx++)
         {
-            mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_MID);
-            running_elem_idx++;
+            mpMesh->GetElement(elem_idx)->AddElementAttribute(THREE_REGION_LEFT);
         }
-        for (unsigned elem_idx = 0; elem_idx < elems_per_region; elem_idx++)
+        for (unsigned elem_idx = region_size_sums[0]; elem_idx < region_size_sums[1]; elem_idx++)
         {
-            mpMesh->GetElement(running_elem_idx)->AddElementAttribute(THREE_REGION_RIGHT);
-            running_elem_idx++;
+            mpMesh->GetElement(elem_idx)->AddElementAttribute(THREE_REGION_MID);
+        }
+        for (unsigned elem_idx = region_size_sums[1]; elem_idx < region_size_sums[2]; elem_idx++)
+        {
+            mpMesh->GetElement(elem_idx)->AddElementAttribute(THREE_REGION_RIGHT);
         }
 
         mBasicInteractionDist = 0.25 * rCellPopulation.GetInteractionDistance();
@@ -321,6 +322,18 @@ void ThreeRegionInteractionForces<DIM>::OutputImmersedBoundaryForceParameters(ou
 
     // Call method on direct parent class
     AbstractImmersedBoundaryForce<DIM>::OutputImmersedBoundaryForceParameters(rParamsFile);
+}
+
+template<unsigned DIM>
+const std::array<unsigned int, 3>& ThreeRegionInteractionForces<DIM>::GetRegionSizes() const
+{
+    return mRegionSizes;
+}
+
+template<unsigned DIM>
+void ThreeRegionInteractionForces<DIM>::SetRegionSizes(const std::array<unsigned int, 3>& regionSizes)
+{
+    mRegionSizes = regionSizes;
 }
 
 // Explicit instantiation

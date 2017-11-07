@@ -114,6 +114,11 @@ protected:
     double mAdhesionMultiplier;
 
     /**
+     * Array representing the number of elements in each of the three regions
+     */
+    std::array<unsigned, 3> mRegionSizes;
+
+    /**
      * Get the type of requested element by interrogating its attribute vector
      *
      * @param elemIdx the index of the element
@@ -192,6 +197,16 @@ public:
      * @return mAdhesionMultiplier
      */
     double GetAdhesionMultiplier();
+
+    /**
+     * @return mRegionSizes
+     */
+    const std::array<unsigned int, 3>& GetRegionSizes() const;
+
+    /**
+     * @param regionSizes the new value of  mRegionSizes
+     */
+    void SetRegionSizes(const std::array<unsigned int, 3>& regionSizes);
 
     /**
      * Overridden OutputImmersedBoundaryForceParameters() method.
