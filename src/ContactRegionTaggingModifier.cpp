@@ -187,8 +187,8 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         // Define apical surface as a number of consecutive nodes that are not neighbours of nodes in other boundaries
         unsigned this_idx = furthest_right_idx;
         unsigned num_right_lat = 0;
-        unsigned num_consecutive_misses = 0;
-        while (num_consecutive_misses < 3u)
+        unsigned num_consecutive_misses = 0u;
+        while (num_consecutive_misses == 0u)
         {
             this_idx = (this_idx + 1) % num_nodes_elem;
             num_consecutive_misses++;
@@ -230,10 +230,8 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         // If we didn't go too far, tag the nodes
         if (num_consecutive_misses != UNSIGNED_UNSET)
         {
-            num_right_lat -= num_consecutive_misses;
-
-            const unsigned num_lateral = std::lround(0.8 * num_right_lat);
-            const unsigned num_pa = std::lround(0.9 * num_right_lat);
+            const unsigned num_lateral = std::lround(0.75 * num_right_lat);
+            const unsigned num_pa = std::lround(0.85 * num_right_lat);
             for (unsigned i = 0; i < num_right_lat; ++i)
             {
                 const unsigned local_idx = (furthest_right_idx + 1 + i) % num_nodes_elem;
@@ -251,14 +249,14 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         this_idx = furthest_left_idx;
         unsigned num_left_lat = 0;
         num_consecutive_misses = 0;
-        while (num_consecutive_misses < 10)
+        while (num_consecutive_misses == 0u)
         {
             this_idx = (this_idx + num_nodes_elem - 1) % num_nodes_elem;
             num_consecutive_misses++;
             num_left_lat++;
 
             // Avoid problems near the basal corners by always accepting the fist few nodes
-            if (num_left_lat < std::lround(0.25 * num_nodes_elem))
+            if (num_left_lat < std::lround(0.1 * num_nodes_elem))
             {
                 num_consecutive_misses = 0;
                 continue;
@@ -293,10 +291,8 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         // If we didn't go too far, tag the nodes
         if (num_consecutive_misses != UNSIGNED_UNSET)
         {
-            num_left_lat -= num_consecutive_misses;
-
-            const unsigned num_lateral = std::lround(0.8 * num_left_lat);
-            const unsigned num_pa = std::lround(0.9 * num_right_lat);
+            const unsigned num_lateral = std::lround(0.75 * num_left_lat);
+            const unsigned num_pa = std::lround(0.85 * num_right_lat);
             for (unsigned i = 0; i < num_left_lat; ++i)
             {
                 unsigned local_idx = (furthest_left_idx + num_nodes_elem - i - 1) % num_nodes_elem;

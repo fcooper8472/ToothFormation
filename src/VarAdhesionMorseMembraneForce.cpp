@@ -87,11 +87,11 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
                                                                   ImmersedBoundaryCellPopulation<DIM>& rCellPopulation,
                                                                   double intrinsicSpacingSquared)
 {
+    auto& r_mesh = rCellPopulation.rGetMesh();
+
     // Get index and number of nodes of current element
     const unsigned elem_idx = rElement.GetIndex();
     const unsigned num_nodes = rElement.GetNumNodes();
-
-
 
     unsigned elem_region = 2u;
     if (rElement.GetIndex() < mRegionSizes[0])
@@ -182,48 +182,56 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         rElement.GetNode(node_idx)->AddAppliedForceContribution(aggregate_force);
     }
 
-    // Add contributions from corner nodes of middle cells, if all corners are defined
-    if (elem_region == 1u)
+    // Add contributions from corner nodes of cells, if all corners are defined
+    if (elem_region < 3u)
     {
-        auto& rCorners = rElement.rGetCornerNodes();
+        const auto& rCorners = rElement.rGetCornerNodes();
 
         if (std::any_of(rCorners.begin(), rCorners.end(), [](Node<DIM> *a) { return a == nullptr; }))
         {
             EXCEPTION("At least one corner of a central cell is not defined.");
         }
 
-        constexpr double width = 0.9 * 1.0 / 15.0;
+        constexpr double width = 0.85 * 1.0 / 15.0;
         constexpr double height = 2.0 * width;
-        const double factor = 0.15;
+        const double factor = 0.1;
 
         Node<DIM>* const p_lt_ap = rCorners[LEFT_APICAL_CORNER];
         Node<DIM>* const p_rt_ap = rCorners[RIGHT_APICAL_CORNER];
         Node<DIM>* const p_lt_ba = rCorners[LEFT_BASAL_CORNER];
         Node<DIM>* const p_rt_ba = rCorners[RIGHT_BASAL_CORNER];
 
-        auto left_vec = p_lt_ap->rGetLocation() - p_lt_ba->rGetLocation();
-        const double len_1 = norm_2(left_vec);
-        const auto force_1 = factor * (len_1 - height) * mElementWellDepth * left_vec / len_1;
-        p_lt_ap->AddAppliedForceContribution(-force_1);
-        p_lt_ba->AddAppliedForceContribution(force_1);
+//        bool calculate_forces = r_mesh.GetDistanceBetweenNodes(p_lt_ap->GetIndex(), p_lt_ba->GetIndex()) < 0.9 * height ||
+//                                elem_region == 1u;
 
-        auto right_vec = p_rt_ap->rGetLocation() - p_rt_ba->rGetLocation();
-        const double len_2 = norm_2(right_vec);
-        const auto force_2 = factor * (len_2 - height) * mElementWellDepth * right_vec / len_2;
-        p_rt_ap->AddAppliedForceContribution(-force_2);
-        p_rt_ba->AddAppliedForceContribution(force_2);
+        bool calculate_forces = elem_region == 1u;
 
-        auto top_vec = p_lt_ap->rGetLocation() - p_rt_ap->rGetLocation();
-        const double len_3 = norm_2(top_vec);
-        const auto force_3 = factor * (len_3 - width) * mElementWellDepth * top_vec / len_3;
-        p_lt_ap->AddAppliedForceContribution(-force_3);
-        p_rt_ap->AddAppliedForceContribution(force_3);
+        if (calculate_forces)
+        {
+            auto left_vec = r_mesh.GetVectorFromAtoB(p_lt_ba->rGetLocation(), p_lt_ap->rGetLocation());
+            const double len_1 = norm_2(left_vec);
+            const auto force_1 = factor * (len_1 - height) * mElementWellDepth * left_vec / len_1;
+            p_lt_ap->AddAppliedForceContribution(-force_1);
+            p_lt_ba->AddAppliedForceContribution(force_1);
 
-        auto bot_vec = p_lt_ba->rGetLocation() - p_rt_ba->rGetLocation();
-        const double len_4 = norm_2(bot_vec);
-        const auto force_4 = factor * (len_4 - width) * mElementWellDepth * bot_vec / len_4;
-        p_lt_ba->AddAppliedForceContribution(-force_4);
-        p_rt_ba->AddAppliedForceContribution(force_4);
+            auto right_vec = r_mesh.GetVectorFromAtoB(p_rt_ba->rGetLocation(), p_rt_ap->rGetLocation());
+            const double len_2 = norm_2(right_vec);
+            const auto force_2 = factor * (len_2 - height) * mElementWellDepth * right_vec / len_2;
+            p_rt_ap->AddAppliedForceContribution(-force_2);
+            p_rt_ba->AddAppliedForceContribution(force_2);
+
+            auto top_vec = r_mesh.GetVectorFromAtoB(p_rt_ap->rGetLocation(), p_lt_ap->rGetLocation());
+            const double len_3 = norm_2(top_vec);
+            const auto force_3 = factor * (len_3 - width) * mElementWellDepth * top_vec / len_3;
+            p_lt_ap->AddAppliedForceContribution(-force_3);
+            p_rt_ap->AddAppliedForceContribution(force_3);
+
+            auto bot_vec = r_mesh.GetVectorFromAtoB(p_rt_ba->rGetLocation(), p_lt_ba->rGetLocation());
+            const double len_4 = norm_2(bot_vec);
+            const auto force_4 = factor * (len_4 - width) * mElementWellDepth * bot_vec / len_4;
+            p_lt_ba->AddAppliedForceContribution(-force_4);
+            p_rt_ba->AddAppliedForceContribution(force_4);
+        }
     }
 }
 

@@ -238,7 +238,7 @@ void SetupAndRunSimulation()
     simulator.SetOutputDirectory(output_directory.str());
 
     // Calculate sampling multiple to have at least 5 frames per second on a 8 second video
-    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (1.0 * 5.0))));
+    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (4.0 * 5.0))));
 
     // Set simulation properties
     double dt = 0.01;
@@ -284,6 +284,32 @@ void SetupAndRunSimulation()
 
     double vol_end = p_mesh->GetVolumeOfElement(4u);
 
+    // Calculate the average lean of cells
+    std::vector<double> leans;
+    for (unsigned elem_idx = 0; elem_idx < p_mesh->GetNumElements(); ++elem_idx)
+    {
+        if (elem_idx < region_sizes[0])
+        {
+            // Get and orient the short axis
+            auto short_axis = p_mesh->GetShortAxisOfElement(elem_idx);
+            short_axis = short_axis[0] < 0.0 ? short_axis : -short_axis;
+            leans.push_back(atan(short_axis[1] / fabs(short_axis[0])));
+        }
+        else if (elem_idx >= region_sizes[0] + region_sizes[1])
+        {
+            // Get and orient the short axis
+            auto short_axis = p_mesh->GetShortAxisOfElement(elem_idx);
+            short_axis = short_axis[0] > 0.0 ? short_axis : -short_axis;
+            leans.push_back(atan(short_axis[1] / short_axis[0]));
+        }
+    }
+
+    const double lean_mean = std::accumulate(leans.begin(), leans.end(), 0.0) / leans.size();
+    const double lean_var = std::inner_product(leans.begin(), leans.end(), leans.begin(), 0.0) / leans.size() - lean_mean * lean_mean;
+
+    PRINT_VECTOR(leans);
+
+
     PRINT_VARIABLE(vol_end / vol_start);
 
     OutputFileHandler results_handler(output_directory.str(), false);
@@ -292,11 +318,18 @@ void SetupAndRunSimulation()
     // Output summary statistics to results file
     (*results_file) << "id,"
                     << "max_y_var,"
-                    << "asymmetry_measure" << std::endl;
+                    << "asymmetry_measure,"
+                    << "lamina_lean,"
+                    << "lean_mean,"
+                    << "lean_std"
+                    << std::endl;
 
     (*results_file) << id_string << ","
                     << boost::lexical_cast<std::string>(max_y - min_y) << ","
-                    << p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(4, unit_vector<double>(2, 0));
+                    << boost::lexical_cast<std::string>(atan((max_y - min_y) / 0.5)) << ","
+                    << p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(4, unit_vector<double>(2, 0)) << ","
+                    << boost::lexical_cast<std::string>(lean_mean) << ","
+                    << boost::lexical_cast<std::string>(std::sqrt(lean_var));
 
     // Tidy up
     results_file->close();

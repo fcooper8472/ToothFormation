@@ -50,17 +50,17 @@ today = time.strftime('%Y-%m-%dT%H%M')
 
 # Param ranges (in lists, for itertools product)
 crl = [0.25]
-csc = np.linspace(1.6 * 1e8, 2.0 * 1e8, num=1)
+csc = np.linspace(1.4 * 1e8, 2.0 * 1e8, num=1)
 trl = [0.25]  # multiple of the interaction distance
-tsc = np.linspace(1.0 * 1e7, 1.4 * 1e7, num=1)
+tsc = np.linspace(1.4 * 1e7, 1.4 * 1e7, num=1)
 kfs = np.linspace(1.0, 3.0, num=1)
 alm = np.linspace(0.1, 0.2, num=1)
 di = np.linspace(0.02, 0.05, num=1)
-sm = np.linspace(1.0, 0.5, num=6)
+sm = np.linspace(0.5, 0.8, num=4)
 ns = [0.03]
 rf = [50]
-ts = [4000]
-al = [False]*5
+ts = [5000]
+al = [False]*1
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
 combined_iterable = list(itertools.product(crl, csc, trl, tsc, kfs, alm, di, sm, ns, rf, ts, al))
