@@ -1,2 +1,5 @@
+TestGenerateAndCacheRandomField.hpp
+TestSamplesFromCachedRandomField.hpp
 TestSingleCellSimulation.hpp
 TestThreeRegionSimulation.hpp
+TestUniformGridRandomFieldGenerator.hpp
