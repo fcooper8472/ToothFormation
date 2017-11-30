@@ -46,6 +46,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "ExecutableSupport.hpp"
 #include "FluidSource.hpp"
+#include "ImmersedBoundaryGaussianNoiseModifier.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundaryMorseInteractionForce.hpp"
 #include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
@@ -173,7 +174,7 @@ void SetupAndRunSimulation()
     ImmersedBoundaryPalisadeMeshGenerator gen(15u, 128u, 0.05, 2.0, 0.0, true, apical_lamina, false, 192u);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
-    std::array<unsigned, 3> region_sizes = {{7u, 1u, 7u}};
+    std::array<unsigned, 3> region_sizes = {{6u, 3u, 6u}};
 
     std::cout << p_mesh->GetSpacingRatio() << std::endl;
 
@@ -209,6 +210,8 @@ void SetupAndRunSimulation()
         simulator.AddSimulationModifier(boost::make_shared<ContactRegionTaggingModifier<2>>());
     }
 
+    simulator.AddSimulationModifier(boost::make_shared<ImmersedBoundaryGaussianNoiseModifier<2>>());
+
     // Add force laws
     auto p_boundary_force = boost::make_shared<VarAdhesionMorseMembraneForce<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
@@ -243,7 +246,7 @@ void SetupAndRunSimulation()
     // Set simulation properties
     double dt = 0.01;
     simulator.SetDt(dt);
-    simulator.SetSamplingTimestepMultiple(10u);
+    simulator.SetSamplingTimestepMultiple(UINT_MAX);
     simulator.SetEndTime(num_time_steps * dt);
     p_svg_writer->SetSamplingMultiple(sampling_multiple);
 
