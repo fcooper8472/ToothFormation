@@ -10,22 +10,6 @@
 #
 # Note that the order in which components are specified does not matter.
 
-# Find eigen3
-set(EIGEN3_ROOT "$ENV{EIGEN3_ROOT}")
-if(EXISTS ${EIGEN3_ROOT}/signature_of_eigen3_matrix_library)
-    include_directories(SYSTEM "${EIGEN3_ROOT}")
-else()
-    message(FATAL_ERROR "Set the environment variable EIGEN3_ROOT to the Eigen3 directory containing the file 'signature_of_eigen3_matrix_library'.")
-endif()
-
-# Find Spectra (https://github.com/yixuan/spectra)
-set(SPECTRA_ROOT "$ENV{SPECTRA_ROOT}/include")
-if(EXISTS ${SPECTRA_ROOT}/GenEigsComplexShiftSolver.h)
-    include_directories(SYSTEM "${SPECTRA_ROOT}")
-else()
-    message(FATAL_ERROR "Set the environment variable SPECTRA_ROOT to the Spectra directory containing the file 'include/GenEigsComplexShiftSolver.h'.")
-endif()
-
 # Here we just depend on core components (nothing application-specific).
 find_package(Chaste COMPONENTS cell_based)
 
