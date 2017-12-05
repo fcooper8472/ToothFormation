@@ -49,16 +49,11 @@ ThreeRegionSvgWriter<DIM>::ThreeRegionSvgWriter()
 }
 
 template <unsigned DIM>
-ThreeRegionSvgWriter<DIM>::~ThreeRegionSvgWriter()
-{
-}
-
-template <unsigned DIM>
 void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM, DIM>& rCellPopulation)
 {
     if (SimulationTime::Instance()->GetTimeStepsElapsed() % mSamplingMultiple == 0)
     {
-        ImmersedBoundaryMesh<DIM, DIM> *p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM> *>(&(rCellPopulation.rGetMesh()));
+        auto p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM> *>(&(rCellPopulation.rGetMesh()));
 
         // Get the number of time steps elapsed to use in the file name, and zero-pad it
         std::stringstream time;
@@ -72,7 +67,7 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
         (*svg_file) << mSvgHeader;
 
         // Add all nodes to the svg file
-        double node_rad = p_mesh->GetAverageNodeSpacingOfElement(0, false) * 0.35 * mSvgSize;
+        const double node_rad = p_mesh->GetAverageNodeSpacingOfElement(0, false) * 0.35 * mSvgSize;
         for (typename AbstractMesh<DIM, DIM>::NodeIterator it = p_mesh->GetNodeIteratorBegin();
              it != p_mesh->GetNodeIteratorEnd();
              ++it)
@@ -81,8 +76,7 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
         }
 
         // Add glyphs to the svg file
-        unsigned num_elems_per_region = p_mesh->GetNumElements() / 3;
-        double glyph_rad = 0.005 * mSvgSize;
+        const double glyph_rad = 0.005 * mSvgSize;
         for (typename ImmersedBoundaryMesh<DIM, DIM>::ImmersedBoundaryElementIterator it = p_mesh->GetElementIteratorBegin();
              it != p_mesh->GetElementIteratorEnd();
              ++it)
@@ -108,6 +102,12 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
                               glyph_rad,
                               p_mesh->GetElongationShapeFactorOfElement(it->GetIndex()),
                               angle);
+
+            // Add large black points to visualise corners
+            for (const auto& corner : it->rGetCornerNodes())
+            {
+                AddPointToSvgFile(svg_file, corner->rGetLocation(), 8u, 1.5 * node_rad);
+            }
         }
 
         (*svg_file) << "<text x=\"" << 0.05 * mSvgSize << "\" y=\"" << (0.45 + 9.0 / 32.0) * mSvgSize << "\" "
@@ -128,20 +128,20 @@ void ThreeRegionSvgWriter<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCe
     mOutputDirectory = outputDirectory;
 
     // Define colours
-    std::string bg_col = "darkgray";
-    std::string region0_col = "#990000"; // dark red
-    std::string region1_col = "#cc0000"; // light red
-    std::string region2_col = "#e68a00"; // dark orange
-    std::string region3_col = "#ff9900"; // light orange
-    std::string region4_col = "#006666"; // dark teal
-    std::string region5_col = "#009999"; // light teal
-    std::string region6_col = "#000099"; // dark blue
-    std::string region7_col = "#0000cc"; // light blue
-    std::string region8_col = "#FFFFFF"; // white
-    std::string region9_col = "#000000"; // black
-    std::string glyph0_col = "DarkRed"; // white
-    std::string glyph1_col = "DarkBlue"; // white
-    std::string glyph2_col = "DarkGreen"; // white
+    const std::string bg_col = "darkgray";
+    const std::string region0_col = "#990000"; // dark red
+    const std::string region1_col = "#cc0000"; // light red
+    const std::string region2_col = "#e68a00"; // dark orange
+    const std::string region3_col = "#ff9900"; // light orange
+    const std::string region4_col = "#006666"; // dark teal
+    const std::string region5_col = "#009999"; // light teal
+    const std::string region6_col = "#000099"; // dark blue
+    const std::string region7_col = "#0000cc"; // light blue
+    const std::string region8_col = "#FFFFFF"; // white
+    const std::string region9_col = "#000000"; // black
+    const std::string glyph0_col = "DarkRed"; // white
+    const std::string glyph1_col = "DarkBlue"; // white
+    const std::string glyph2_col = "DarkGreen"; // white
 
     std::stringstream header;
 
@@ -191,10 +191,11 @@ void ThreeRegionSvgWriter<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCe
 }
 
 template <unsigned DIM>
-void ThreeRegionSvgWriter<DIM>::AddPointToSvgFile(out_stream& rSvgFile, c_vector<double, DIM> location, unsigned region, double rad)
+void ThreeRegionSvgWriter<DIM>::AddPointToSvgFile(out_stream& rSvgFile, c_vector<double, DIM> location, unsigned region,
+                                                  double rad) const noexcept
 {
-    double scaled_x = location[0] * mSvgSize;
-    double scaled_y = (1.0 - location[1]) * mSvgSize;
+    const double scaled_x = location[0] * mSvgSize;
+    const double scaled_y = (1.0 - location[1]) * mSvgSize;
 
     (*rSvgFile) << "<circle class=\"node_" << region << "\" "
                 << "cx=\"" << scaled_x << "\" "
@@ -240,12 +241,12 @@ void ThreeRegionSvgWriter<DIM>::AddGlyphToSvgFile(out_stream& rSvgFile,
                                                   unsigned region,
                                                   double rad,
                                                   double elongation,
-                                                  int angle)
+                                                  int angle) const noexcept
 {
-    double scaled_x = location[0] * mSvgSize;
-    double scaled_y = (1.0 - location[1]) * mSvgSize;
+    const double scaled_x = location[0] * mSvgSize;
+    const double scaled_y = (1.0 - location[1]) * mSvgSize;
 
-    double max_size = std::max(rad, rad * elongation);
+    const double max_size = std::max(rad, rad * elongation);
 
     (*rSvgFile) << "<ellipse class=\"glyph_" << region << "\" "
                 << "transform=\"translate(" << scaled_x << " " << scaled_y

@@ -99,7 +99,7 @@ public:
     /**
      * Destructor.
      */
-    virtual ~ThreeRegionSvgWriter();
+    virtual ~ThreeRegionSvgWriter() = default;
 
     /**
      * Overridden UpdateAtEndOfTimeStep() method.
@@ -130,7 +130,7 @@ public:
      * @param region metadata to allow different colouring for points
      * @param rad the radius of circle representing the point
      */
-    void AddPointToSvgFile(out_stream& rSvgFile, c_vector<double, DIM> location, unsigned region, double rad);
+    void AddPointToSvgFile(out_stream& rSvgFile, c_vector<double, DIM> location, unsigned region, double rad) const noexcept;
 
     /**
      * Helper method for UpdateAtEndOfTimeStep().
@@ -144,7 +144,8 @@ public:
      * @param elongation the elongation of the ellipse
      * @param angle the angle at which to display the ellipse
      */
-    void AddGlyphToSvgFile(out_stream& rSvgFile, c_vector<double, DIM> location, unsigned region, double rad, double elongation, int angle);
+    void AddGlyphToSvgFile(out_stream& rSvgFile, c_vector<double, DIM> location, unsigned region, double rad,
+                           double elongation, int angle) const noexcept;
 
     /**
      * Overridden OutputSimulationModifierParameters() method.
