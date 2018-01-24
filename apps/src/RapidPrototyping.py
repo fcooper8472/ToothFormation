@@ -50,14 +50,14 @@ today = time.strftime('%Y-%m-%dT%H%M')
 
 # Param ranges (in lists, for itertools product)
 crl = [0.25]
-csc = np.linspace(1.4 * 1e8, 2.0 * 1e8, num=1)
+csc = np.linspace(1.0 * 1e8, 0.8 * 1e8, num=1)
 trl = [0.25]  # multiple of the interaction distance
-tsc = np.linspace(1.4 * 1e7, 1.4 * 1e7, num=1)
+tsc = np.linspace(1.0 * 1e7, 1.4 * 1e7, num=1)
 kfs = np.linspace(1.0, 3.0, num=1)
 alm = np.linspace(0.1, 0.2, num=1)
 di = np.linspace(0.02, 0.05, num=1)
-sm = np.linspace(0.5, 0.8, num=4)
-ns = [0.03]
+sm = np.linspace(0.7, 0.8, num=1)
+ns = [1e2]
 rf = [50]
 ts = [5000]
 al = [False]*1
@@ -72,7 +72,7 @@ def main():
     combine_output()
     make_movies_parallel()
     generate_html()
-    compress_output()
+    # compress_output()
 
 
 # Delete output directory
@@ -199,6 +199,10 @@ def combine_output():
                 combined_results.append(local_results.readline().strip('\n'))
         else:  # results file does not exist
             combined_results.append(str(idx) + ',' + 'simulation_incomplete')
+
+    # All simulations failed, so no header was read from any results file
+    if not results_header:
+        results_header.append('id,status')
 
     with open(os.path.join(path_to_output, 'combined_results.csv'), 'w') as combined_results_file:
         combined_results_file.write('\n'.join(results_header + combined_results))

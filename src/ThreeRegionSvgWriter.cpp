@@ -106,7 +106,10 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
             // Add large black points to visualise corners
             for (const auto& corner : it->rGetCornerNodes())
             {
-                AddPointToSvgFile(svg_file, corner->rGetLocation(), 8u, 1.5 * node_rad);
+                if (corner != nullptr)
+                {
+                    AddPointToSvgFile(svg_file, corner->rGetLocation(), 8u, 1.5 * node_rad);
+                }
             }
         }
 

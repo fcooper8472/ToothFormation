@@ -259,6 +259,32 @@ double ThreeRegionInteractionForces<DIM>::CalculateElementTypeMult(Node<DIM>* pN
     {
         type_mult = mAdhesionMultiplier;
     }
+
+//    if (elem_type_b == THREE_REGION_MID || elem_type_a == THREE_REGION_MID)
+//    {
+//        return type_mult;
+//    }
+
+//    if (region_a == RIGHT_APICAL_REGION || region_a == LEFT_APICAL_REGION)
+//    {
+//        type_mult = mAdhesionMultiplier;
+//    }
+//
+//    if (region_b == RIGHT_APICAL_REGION || region_b == LEFT_APICAL_REGION)
+//    {
+//        type_mult = mAdhesionMultiplier;
+//    }
+
+//    if (region_b == RIGHT_LATERAL_REGION || region_b == LEFT_LATERAL_REGION || region_a == RIGHT_LATERAL_REGION || region_a == LEFT_LATERAL_REGION)
+//    {
+//        type_mult = 0.0;
+//    }
+
+    if (elem_type_a == THREE_REGION_LAMINA || elem_type_b == THREE_REGION_LAMINA)
+    {
+        type_mult *= 2.0;
+    }
+
 //    if (elem_type_a == THREE_REGION_MID)
 //    {
 //        if (region_a == LEFT_BASAL_REGION || region_a == RIGHT_BASAL_REGION)

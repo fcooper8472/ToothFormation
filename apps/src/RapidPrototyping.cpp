@@ -46,7 +46,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "ExecutableSupport.hpp"
 #include "FluidSource.hpp"
-#include "ImmersedBoundaryGaussianNoiseModifier.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundaryMorseInteractionForce.hpp"
 #include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
@@ -193,8 +192,12 @@ void SetupAndRunSimulation()
     simulator.SetNumericalMethod(boost::make_shared<ForwardEulerNumericalMethod<2, 2>>());
     simulator.GetNumericalMethod()->SetUseUpdateNodeLocation(true);
 
-    // Add main immersed boundary simulation modifier
+    // Add main immersed boundary simulation modifier and random noise
     auto p_main_modifier = boost::make_shared<ImmersedBoundarySimulationModifier<2>>();
+    p_main_modifier->SetNoiseLengthScale(0.03);
+    p_main_modifier->SetNoiseSkip(4u);
+    p_main_modifier->SetNoiseStrength(normal_std);
+    p_main_modifier->SetAdditiveNormalNoise(true);
     simulator.AddSimulationModifier(p_main_modifier);
 
     auto p_svg_writer = boost::make_shared<ThreeRegionSvgWriter<2>>();
@@ -209,8 +212,6 @@ void SetupAndRunSimulation()
     {
         simulator.AddSimulationModifier(boost::make_shared<ContactRegionTaggingModifier<2>>());
     }
-
-    simulator.AddSimulationModifier(boost::make_shared<ImmersedBoundaryGaussianNoiseModifier<2>>());
 
     // Add force laws
     auto p_boundary_force = boost::make_shared<VarAdhesionMorseMembraneForce<2>>();
@@ -227,13 +228,9 @@ void SetupAndRunSimulation()
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
     p_cell_cell_force->SetBasicInteractionStrength(tra_spring_const);
     p_cell_cell_force->SetBasicInteractionDist(interaction_dist * tra_rest_length);
-    p_cell_cell_force->SetAdhesionMultiplier(2.0);
+    p_cell_cell_force->SetAdhesionMultiplier(4.0);
     p_cell_cell_force->SetRegionSizes(region_sizes);
 
-    // Add some noise to the
-    p_cell_cell_force->SetAdditiveNormalNoise(true);
-    p_cell_cell_force->SetNormalNoiseMean(0.0);
-    p_cell_cell_force->SetNormalNoiseStdDev(normal_std);
 
     // Create and set an output directory that is different for each simulation
     std::stringstream output_directory;
@@ -241,7 +238,7 @@ void SetupAndRunSimulation()
     simulator.SetOutputDirectory(output_directory.str());
 
     // Calculate sampling multiple to have at least 5 frames per second on a 8 second video
-    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (4.0 * 5.0))));
+    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (5.0 * 4.0))));
 
     // Set simulation properties
     double dt = 0.01;
@@ -309,6 +306,7 @@ void SetupAndRunSimulation()
 
     const double lean_mean = std::accumulate(leans.begin(), leans.end(), 0.0) / leans.size();
     const double lean_var = std::inner_product(leans.begin(), leans.end(), leans.begin(), 0.0) / leans.size() - lean_mean * lean_mean;
+    const double skew_4 = p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(4, unit_vector<double>(2, 0));
 
     PRINT_VECTOR(leans);
 
@@ -328,11 +326,11 @@ void SetupAndRunSimulation()
                     << std::endl;
 
     (*results_file) << id_string << ","
-                    << boost::lexical_cast<std::string>(max_y - min_y) << ","
-                    << boost::lexical_cast<std::string>(atan((max_y - min_y) / 0.5)) << ","
-                    << p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(4, unit_vector<double>(2, 0)) << ","
-                    << boost::lexical_cast<std::string>(lean_mean) << ","
-                    << boost::lexical_cast<std::string>(std::sqrt(lean_var));
+                    << std::to_string(max_y - min_y) << ","
+                    << std::to_string(atan((max_y - min_y) / 0.5)) << ","
+                    << std::to_string(skew_4) << ","
+                    << std::to_string(lean_mean) << ","
+                    << std::to_string(std::sqrt(lean_var));
 
     // Tidy up
     results_file->close();

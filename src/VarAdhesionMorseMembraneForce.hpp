@@ -94,6 +94,9 @@ private:
     /** The multiplicative factor to change the well depth by for particular nodes */
     double mStiffnessMult;
 
+    /** Place to store the current length of the lamina */
+    double mLaminaLength;
+
     /**
      * Array representing the number of elements in each of the three regions
      */
@@ -104,9 +107,10 @@ private:
      * Determine whether to modify stiffness, based on the elem region and node region.
      * @param elem_region the elem region (left, centre, right, membrane)
      * @param node_region the node region (RIGHT_APICAL, RIGHT_BASAL, etc)
+     * @param elem_idx the index of the current element
      * @return the stiffness multiplier altering interaction properties
      */
-    double CalculateStiffnessMult(unsigned elem_region, unsigned node_region);
+    double CalculateStiffnessMult(unsigned elem_region, unsigned node_region, unsigned elem_idx);
 
     /**
      * Helper method for AddImmersedBoundaryForceContribution.
