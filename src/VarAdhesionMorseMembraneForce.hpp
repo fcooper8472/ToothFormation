@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2017, University of Oxford.
+Copyright (c) 2005-2018, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -108,9 +108,13 @@ private:
      * @param elem_region the elem region (left, centre, right, membrane)
      * @param node_region the node region (RIGHT_APICAL, RIGHT_BASAL, etc)
      * @param elem_idx the index of the current element
+     * @param gradientWeight the weighting due to the location of the element with index elem_idx
      * @return the stiffness multiplier altering interaction properties
      */
-    double CalculateStiffnessMult(unsigned elem_region, unsigned node_region, unsigned elem_idx);
+    double CalculateStiffnessMult(unsigned elem_region,
+                                   unsigned node_region,
+                                   unsigned elem_idx,
+                                   double gradientWeight);
 
     /**
      * Helper method for AddImmersedBoundaryForceContribution.

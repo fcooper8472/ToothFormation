@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2017, University of Oxford.
+Copyright (c) 2005-2018, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -84,6 +84,7 @@ void VarAdhesionMorseMembraneForce<DIM>::AddImmersedBoundaryForceContribution(st
     }
 }
 
+#include "Debug.hpp"
 template <unsigned DIM>
 template <unsigned ELEMENT_DIM>
 void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBoundaryElement<ELEMENT_DIM, DIM>& rElement,
@@ -91,8 +92,6 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
                                                                   double intrinsicSpacingSquared)
 {
     auto& r_mesh = rCellPopulation.rGetMesh();
-
-
 
     // Get index and number of nodes of current element
     const unsigned elem_idx = rElement.GetIndex();
@@ -157,6 +156,17 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         well_width *= node_spacing;
     }
 
+    // Calculate quantity of gradient component
+    auto elem_centroid = r_mesh.GetCentroidOfElement(elem_idx);
+    auto mid_centroid = r_mesh.GetCentroidOfElement((rCellPopulation.rGetMesh().GetNumElements() - 1u) / 2);
+    const double dist_from_centre = std::fabs(r_mesh.GetVectorFromAtoB(elem_centroid, mid_centroid)[0]);
+
+    const double end_of_gradient = 1.0 * mStiffnessMult;
+    const double mid_of_gradient = 1.0;
+
+    const double gradient_weight = mid_of_gradient + 2.0 * (end_of_gradient - mid_of_gradient) * dist_from_centre;
+
+
     // Loop over nodes and calculate the force exerted on node i+1 by node i
     for (unsigned node_idx = 0; node_idx < num_nodes; node_idx++)
     {
@@ -164,7 +174,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         unsigned next_idx = (node_idx + 1) % num_nodes;
 
         // If element rather than lamina, calculate the stiffness multiplier
-        double stiffness_mult = CalculateStiffnessMult(elem_region, rElement.GetNode(node_idx)->GetRegion(), elem_idx);
+        double stiffness_mult = 1.0;//CalculateStiffnessMult(elem_region, rElement.GetNode(node_idx)->GetRegion(), elem_idx, gradient_weight);
 
         // Morse force (derivative of Morse potential wrt distance between nodes
         force_to_next[node_idx] = rCellPopulation.rGetMesh().GetVectorFromAtoB(rElement.GetNodeLocation(node_idx),
@@ -210,7 +220,16 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
 
         if (std::none_of(rCorners.begin(), rCorners.end(), [](Node<DIM> *a) { return a == nullptr; }))
         {
-            double factor = 0.1;
+//            {
+//                c_vector<double, DIM> total_force = zero_vector<double>(DIM);
+//                for (unsigned node_idx = 0; node_idx < rElement.GetNumNodes(); node_idx++)
+//                {
+//                    total_force += rElement.GetNode(node_idx)->rGetAppliedForce();
+//                }
+//                PRINT_VECTOR(total_force);
+//            }
+
+            double factor = 0.01;
 
             Node<DIM>* const p_lt_ap = rCorners[LEFT_APICAL_CORNER];
             Node<DIM>* const p_rt_ap = rCorners[RIGHT_APICAL_CORNER];
@@ -249,50 +268,63 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
 //                p_rt_ba->AddAppliedForceContribution(diag_force);
 //            }
 
-            auto left_vec = r_mesh.GetVectorFromAtoB(p_lt_ba->rGetLocation(), p_lt_ap->rGetLocation());
-            const double len_1 = norm_2(left_vec);
-            //            if ((len_1 > 0.8 * height) && (len_1 < 1.2 * height))
-            {
-                const auto force_1 = factor * (len_1 - left_height) * mElementWellDepth * left_vec / len_1;
+            { // left
+                const c_vector<double, DIM> left_vec = r_mesh.GetVectorFromAtoB(p_lt_ba->rGetLocation(), p_lt_ap->rGetLocation());
+                const double len_1 = norm_2(left_vec);
+                const c_vector<double, DIM> force_1 = (factor * (len_1 - left_height) * well_depth / len_1) * left_vec;
+
                 p_lt_ap->AddAppliedForceContribution(-force_1);
                 p_lt_ba->AddAppliedForceContribution(force_1);
             }
 
-            auto right_vec = r_mesh.GetVectorFromAtoB(p_rt_ba->rGetLocation(), p_rt_ap->rGetLocation());
-            const double len_2 = norm_2(right_vec);
-    //            if ((len_2 > 0.8 * height) && (len_2 < 1.2 * height))
-            {
-                const auto force_2 = factor * (len_2 - right_height) * mElementWellDepth * right_vec / len_2;
+            { // right
+                const c_vector<double, DIM> right_vec = r_mesh.GetVectorFromAtoB(p_rt_ba->rGetLocation(), p_rt_ap->rGetLocation());
+                const double len_2 = norm_2(right_vec);
+                const c_vector<double, DIM> force_2 = (factor * (len_2 - right_height) * well_depth / len_2) * right_vec;
+
                 p_rt_ap->AddAppliedForceContribution(-force_2);
                 p_rt_ba->AddAppliedForceContribution(force_2);
             }
 
-//            if (elem_region == 1u)
-            {
-                auto top_vec = r_mesh.GetVectorFromAtoB(p_rt_ap->rGetLocation(), p_lt_ap->rGetLocation());
+            { // top
+                const c_vector<double, DIM> top_vec = r_mesh.GetVectorFromAtoB(p_rt_ap->rGetLocation(), p_lt_ap->rGetLocation());
                 const double len_3 = norm_2(top_vec);
-//            if (len_3 > width)
-                {
-                    const auto force_3 = factor * (len_3 - bot_height) * mElementWellDepth * top_vec / len_3;
-                    p_lt_ap->AddAppliedForceContribution(-force_3);
-                    p_rt_ap->AddAppliedForceContribution(force_3);
-                }
+                const c_vector<double, DIM> force_3 = (factor * (len_3 - bot_height) * well_depth / len_3) * top_vec;
+
+                p_lt_ap->AddAppliedForceContribution(-force_3);
+                p_rt_ap->AddAppliedForceContribution(force_3);
             }
 
-            auto bot_vec = r_mesh.GetVectorFromAtoB(p_rt_ba->rGetLocation(), p_lt_ba->rGetLocation());
-            const double len_4 = norm_2(bot_vec);
-//            if (len_4 > width)
-            {
-                const auto force_4 = factor * (len_4 - bot_height) * mElementWellDepth * bot_vec / len_4;
+            { // bottom
+                const c_vector<double, DIM> bot_vec = r_mesh.GetVectorFromAtoB(p_rt_ba->rGetLocation(), p_lt_ba->rGetLocation());
+                const double len_4 = norm_2(bot_vec);
+                const c_vector<double, DIM> force_4 = (factor * (len_4 - bot_height) * well_depth / len_4) * bot_vec;
+
                 p_lt_ba->AddAppliedForceContribution(-force_4);
                 p_rt_ba->AddAppliedForceContribution(force_4);
             }
+
+//            {
+//                c_vector<double, DIM> total_force = zero_vector<double>(DIM);
+//                for (unsigned node_idx = 0; node_idx < rElement.GetNumNodes(); node_idx++)
+//                {
+//                    total_force += rElement.GetNode(node_idx)->rGetAppliedForce();
+//                }
+//                PRINT_VECTOR(total_force);
+//                MARK;
+//            }
         }
     }
+
+
 }
 
 template<unsigned DIM>
-double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(unsigned elem_region, unsigned node_region, unsigned elem_idx)
+double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(
+        unsigned elem_region,
+        unsigned node_region,
+        unsigned elem_idx,
+        double gradientWeight)
 {
     double stiffness_mult = 1.0;
 
@@ -301,7 +333,7 @@ double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(unsigned elem_
     {
         if (node_region == RIGHT_APICAL_REGION)// || node_region == RIGHT_PERIAPICAL_REGION)
         {
-            stiffness_mult = 1.0 - (1.0 + (mRegionSizes[0] - (elem_idx + 1.0)) / mRegionSizes[0]) * (1.0 - mStiffnessMult);
+            stiffness_mult = gradientWeight;
         }
     }
     // Right
@@ -309,9 +341,7 @@ double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(unsigned elem_
     {
         if (node_region == LEFT_APICAL_REGION)// || node_region == LEFT_PERIAPICAL_REGION)
         {
-            const unsigned num_elems = mRegionSizes[0] + mRegionSizes[1] + mRegionSizes[2];
-            const unsigned this_idx = num_elems - elem_idx - 1;
-            stiffness_mult = 1.0 - (1.0 + (mRegionSizes[0] - (this_idx + 1.0)) / mRegionSizes[0]) * (1.0 - mStiffnessMult);
+            stiffness_mult = gradientWeight;
         }
     }
     // Centre
