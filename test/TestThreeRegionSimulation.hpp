@@ -66,7 +66,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class TestThreeRegionSimulation : public AbstractCellBasedTestSuite
 {
 public:
-    void TestThreeRegionSim() throw(Exception)
+    void TestThreeRegionSim()
     {
         /*
          * 1: Num cells

@@ -60,7 +60,7 @@ class TestShortImmersedBoundarySimulations : public AbstractCellBasedTestSuite
 {
 public:
 
-    void TestShortSingleCellSim() throw(Exception)
+    void TestShortSingleCellSim()
     {
         /*
          * 1: num nodes
