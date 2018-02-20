@@ -102,7 +102,7 @@ protected:
     double mBasicInteractionStrength;
 
     /**
-     * The cell-cell rest length.
+     * The cell-cell rest length as a proportion of the cell interaction distance.
      *
      * Initialised to 0.25 times the cell interaction distance during setup.
      */

@@ -42,7 +42,7 @@ ThreeRegionInteractionForces<DIM>::ThreeRegionInteractionForces()
           mpMesh(NULL),
           mElemAttributeLocation(UNSIGNED_UNSET),
           mBasicInteractionStrength(1e3),
-          mBasicInteractionDist(DOUBLE_UNSET),
+          mBasicInteractionDist(0.25),
           mAdhesionMultiplier(2.0),
           mRegionSizes()
 {
@@ -109,8 +109,6 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
         {
             mpMesh->GetElement(elem_idx)->AddElementAttribute(THREE_REGION_RIGHT);
         }
-
-        mBasicInteractionDist = 0.25 * rCellPopulation.GetInteractionDistance();
     }
 
     // Helper variables for loop
@@ -125,6 +123,9 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
 
     // The effective spring constant will be a scaled version of mBasicInteractionStrength
     double effective_spring_const;
+
+    // Scale the parametric BasicInteractionDist by the cell population interaction length scale
+    const double effective_interaction_dist = mBasicInteractionDist * rCellPopulation.GetInteractionDistance();
 
     c_vector<double, DIM> vector_between_nodes;
     c_vector<double, DIM> force_a_to_b;
@@ -179,17 +180,17 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
                 elem_type_mult = CalculateElementTypeMult(p_node_a, p_node_b);
 
                 /*
-                * We must scale each applied force by a factor of elem_spacing / local spacing, so that forces
-                * balance when spread to the grid later (where the multiplicative factor is the local spacing)
-                */
-                double morse_exp = exp((mBasicInteractionDist - normed_dist) / well_width);
+                 * We must scale each applied force by a factor of elem_spacing / local spacing, so that forces
+                 * balance when spread to the grid later (where the multiplicative factor is the local spacing)
+                 */
+                double morse_exp = exp((effective_interaction_dist - normed_dist) / well_width);
                 vector_between_nodes *= 2.0 * well_width * effective_spring_const * elem_type_mult * morse_exp *
                                         (1.0 - morse_exp) / normed_dist;
 
-                force_a_to_b = vector_between_nodes * elem_spacing / node_a_elem_spacing;
+                force_a_to_b = vector_between_nodes * (elem_spacing / node_a_elem_spacing);
                 p_node_a->AddAppliedForceContribution(force_a_to_b);
 
-                force_b_to_a = -1.0 * vector_between_nodes * elem_spacing / node_b_elem_spacing;
+                force_b_to_a = vector_between_nodes * (-1.0 * elem_spacing / node_b_elem_spacing);
                 p_node_b->AddAppliedForceContribution(force_b_to_a);
             }
         }
