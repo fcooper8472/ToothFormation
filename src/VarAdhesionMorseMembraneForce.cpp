@@ -61,9 +61,6 @@ void VarAdhesionMorseMembraneForce<DIM>::AddImmersedBoundaryForceContribution(st
         EXCEPTION("mRegionSizes must be set to the correct number of elements");
     }
 
-    // Update the lamina length
-    mLaminaLength = p_mesh->GetAverageNodeSpacingOfLamina(0u, true) * (p_mesh->GetLamina(0u)->GetNumNodes());
-
     // Data common across the entire cell population
     double intrinsicSpacingSquared = rCellPopulation.GetIntrinsicSpacing() * rCellPopulation.GetIntrinsicSpacing();
 
