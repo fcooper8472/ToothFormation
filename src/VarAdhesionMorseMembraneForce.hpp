@@ -71,6 +71,7 @@ private:
         archive& mApicalWellDepthMult;
         archive& mWellWidth;
         archive& mStiffnessMult;
+        archive& mSupportStrength;
     }
 
     /** The basic interaction strength */
@@ -94,8 +95,8 @@ private:
     /** The multiplicative factor to change the well depth by for particular nodes */
     double mStiffnessMult;
 
-    /** Place to store the current length of the lamina */
-    double mLaminaLength;
+    /** Strength of the springs used to support the cell's shape */
+    double mSupportStrength;
 
     /**
      * Array representing the number of elements in each of the three regions
@@ -193,6 +194,12 @@ public:
 
     /** @param stiffnessMult the new value of mStiffnessMult */
     void SetStiffnessMult(double stiffnessMult);
+
+    /** @return mSupportStrength */
+    double GetSupportStrength() const;
+
+    /** @param supportStrength the new value of mSupportStrength */
+    void SetSupportStrength(double supportStrength);
 
     /** @return mRegionSizes */
     const std::array<unsigned int, 3>& GetRegionSizes() const;

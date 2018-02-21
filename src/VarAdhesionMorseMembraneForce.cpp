@@ -217,16 +217,6 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
 
         if (std::none_of(rCorners.begin(), rCorners.end(), [](Node<DIM> *a) { return a == nullptr; }))
         {
-//            {
-//                c_vector<double, DIM> total_force = zero_vector<double>(DIM);
-//                for (unsigned node_idx = 0; node_idx < rElement.GetNumNodes(); node_idx++)
-//                {
-//                    total_force += rElement.GetNode(node_idx)->rGetAppliedForce();
-//                }
-//                PRINT_VECTOR(total_force);
-//            }
-
-            double factor = 0.01;
 
             Node<DIM>* const p_lt_ap = rCorners[LEFT_APICAL_CORNER];
             Node<DIM>* const p_rt_ap = rCorners[RIGHT_APICAL_CORNER];
@@ -268,7 +258,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
             { // left
                 const c_vector<double, DIM> left_vec = r_mesh.GetVectorFromAtoB(p_lt_ba->rGetLocation(), p_lt_ap->rGetLocation());
                 const double len_1 = norm_2(left_vec);
-                const c_vector<double, DIM> force_1 = (factor * (len_1 - left_height) * well_depth / len_1) * left_vec;
+                const c_vector<double, DIM> force_1 = (mSupportStrength * (len_1 - left_height) * well_depth / len_1) * left_vec;
 
                 p_lt_ap->AddAppliedForceContribution(-force_1);
                 p_lt_ba->AddAppliedForceContribution(force_1);
@@ -277,7 +267,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
             { // right
                 const c_vector<double, DIM> right_vec = r_mesh.GetVectorFromAtoB(p_rt_ba->rGetLocation(), p_rt_ap->rGetLocation());
                 const double len_2 = norm_2(right_vec);
-                const c_vector<double, DIM> force_2 = (factor * (len_2 - right_height) * well_depth / len_2) * right_vec;
+                const c_vector<double, DIM> force_2 = (mSupportStrength * (len_2 - right_height) * well_depth / len_2) * right_vec;
 
                 p_rt_ap->AddAppliedForceContribution(-force_2);
                 p_rt_ba->AddAppliedForceContribution(force_2);
@@ -286,7 +276,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
             { // top
                 const c_vector<double, DIM> top_vec = r_mesh.GetVectorFromAtoB(p_rt_ap->rGetLocation(), p_lt_ap->rGetLocation());
                 const double len_3 = norm_2(top_vec);
-                const c_vector<double, DIM> force_3 = (factor * (len_3 - bot_height) * well_depth / len_3) * top_vec;
+                const c_vector<double, DIM> force_3 = (mSupportStrength * (len_3 - bot_height) * well_depth / len_3) * top_vec;
 
                 p_lt_ap->AddAppliedForceContribution(-force_3);
                 p_rt_ap->AddAppliedForceContribution(force_3);
@@ -295,21 +285,11 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
             { // bottom
                 const c_vector<double, DIM> bot_vec = r_mesh.GetVectorFromAtoB(p_rt_ba->rGetLocation(), p_lt_ba->rGetLocation());
                 const double len_4 = norm_2(bot_vec);
-                const c_vector<double, DIM> force_4 = (factor * (len_4 - bot_height) * well_depth / len_4) * bot_vec;
+                const c_vector<double, DIM> force_4 = (mSupportStrength * (len_4 - bot_height) * well_depth / len_4) * bot_vec;
 
                 p_lt_ba->AddAppliedForceContribution(-force_4);
                 p_rt_ba->AddAppliedForceContribution(force_4);
             }
-
-//            {
-//                c_vector<double, DIM> total_force = zero_vector<double>(DIM);
-//                for (unsigned node_idx = 0; node_idx < rElement.GetNumNodes(); node_idx++)
-//                {
-//                    total_force += rElement.GetNode(node_idx)->rGetAppliedForce();
-//                }
-//                PRINT_VECTOR(total_force);
-//                MARK;
-//            }
         }
     }
 
@@ -457,6 +437,18 @@ template<unsigned DIM>
 void VarAdhesionMorseMembraneForce<DIM>::SetRegionSizes(const std::array<unsigned int, 3>& regionSizes)
 {
     mRegionSizes = regionSizes;
+}
+
+template<unsigned int DIM>
+double VarAdhesionMorseMembraneForce<DIM>::GetSupportStrength() const
+{
+    return mSupportStrength;
+}
+
+template<unsigned int DIM>
+void VarAdhesionMorseMembraneForce<DIM>::SetSupportStrength(double supportStrength)
+{
+    mSupportStrength = supportStrength;
 }
 
 // Explicit instantiation

@@ -39,11 +39,11 @@ if not(os.path.isfile(executable)):
     quit('Py: Could not find executable: ' + executable)
 
 # List of command line arguments for the executable, and corresponding list of parameter names
-command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --TRL ', ' --TSC ', ' --KFS ', ' --ALM ', ' --DI ', ' --SM ',
-                     ' --NS ', ' --RM ', ' --TS ', ' --AL ']
-params_list = ['simulation_id', 'cor_rest_length', 'cor_spring_const', 'tra_rest_length', 'tra_spring_const',
-               'kinematic_strength', 'apical_lam_mult', 'interaction_dist', 'stiffness_mult', 'normal_std',
-               'remesh_frequency', 'num_time_steps', 'apical_lamina']
+command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --SUP ', ' --TRL ', ' --TSC ', ' --KFS ', ' --ALM ', ' --DI ',
+                     ' --SM ', ' --AAM ', ' --NS ', ' --RM ', ' --TS ', ' --AL ']
+params_list = ['simulation_id', 'cor_rest_length', 'cor_spring_const', 'support_strenght', 'tra_rest_length',
+               'tra_spring_const', 'kinematic_strength', 'apical_lam_mult', 'interaction_dist', 'stiffness_mult',
+               'ap-ap_mult', 'normal_std', 'remesh_frequency', 'num_time_steps', 'apical_lamina']
 
 # Time string when script is run, used for creating a unique archive name
 today = time.strftime('%Y-%m-%dT%H%M')
@@ -51,19 +51,21 @@ today = time.strftime('%Y-%m-%dT%H%M')
 # Param ranges (in lists, for itertools product)
 crl = [0.25]
 csc = np.linspace(1.0 * 1e8, 0.8 * 1e8, num=1)
+sup = [0.01]
 trl = [0.25]  # multiple of the interaction distance
 tsc = np.linspace(1.0 * 1e7, 1.4 * 1e7, num=1)
 kfs = np.linspace(1.0, 3.0, num=1)
 alm = np.linspace(0.1, 0.2, num=1)
 di = np.linspace(0.02, 0.05, num=1)
-sm = np.linspace(0.7, 0.8, num=1)
+sm = np.linspace(0.8, 0.6, num=2)
+aam = np.linspace(4.0, 4.0, num=1)
 ns = [1e2]
 rf = [50]
 ts = [5000]
 al = [False]*1
 
 # An enumerated iterable containing every combination of the parameter ranges defined above
-combined_iterable = list(itertools.product(crl, csc, trl, tsc, kfs, alm, di, sm, ns, rf, ts, al))
+combined_iterable = list(itertools.product(crl, csc, sup, trl, tsc, kfs, alm, di, sm, aam, ns, rf, ts, al))
 
 
 def main():

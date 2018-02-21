@@ -90,12 +90,14 @@ int main(int argc, char* argv[])
         ("ID", bpo::value<std::string>(),"ID string for the simulation")
         ("CRL", bpo::value<double>()->default_value(0.0),"Cortical rest length")
         ("CSC", bpo::value<double>()->default_value(0.0),"Cortical spring constant")
+        ("SUP", bpo::value<double>()->default_value(0.0),"Support strength")
         ("TRL", bpo::value<double>()->default_value(0.0),"Transmembrane rest length")
         ("TSC", bpo::value<double>()->default_value(0.0),"Transmembrane spring constant")
         ("KFS", bpo::value<double>()->default_value(0.0),"Kinematic Feedback strength")
         ("ALM", bpo::value<double>()->default_value(0.0),"Apical lamina stiffness multiplier")
         ("DI", bpo::value<double>()->default_value(0.0),"Interaction distance for cell-cell forces")
         ("SM", bpo::value<double>()->default_value(0.0),"Stiffness multiplier for membrane forces")
+        ("AAM", bpo::value<double>()->default_value(0.0),"Apical-apical interaction multiplier")
         ("NS", bpo::value<double>()->default_value(0.0),"Standard deviation for normal noise")
         ("RM", bpo::value<unsigned>()->default_value(1u),"ReMesh frequency")
         ("TS", bpo::value<unsigned>()->default_value(1000u),"Number of time steps")
@@ -148,12 +150,14 @@ void SetupAndRunSimulation()
     std::string id_string = gVariablesMap["ID"].as<std::string>();
     double cor_rest_length = gVariablesMap["CRL"].as<double>();
     double cor_spring_const = gVariablesMap["CSC"].as<double>();
+    double supp_strength = gVariablesMap["SUP"].as<double>();
     double tra_rest_length = gVariablesMap["TRL"].as<double>();
     double tra_spring_const = gVariablesMap["TSC"].as<double>();
     double kin_feedback_str = gVariablesMap["KFS"].as<double>();
     double apical_lam_mult = gVariablesMap["ALM"].as<double>();
     double interaction_dist = gVariablesMap["DI"].as<double>();
     double stiffness_mult = gVariablesMap["SM"].as<double>();
+    double apical_apical_mult = gVariablesMap["AAM"].as<double>();
     double normal_std = gVariablesMap["NS"].as<double>();
     unsigned remesh_freq = gVariablesMap["RM"].as<unsigned>();
     unsigned num_time_steps = gVariablesMap["TS"].as<unsigned>();
@@ -184,7 +188,6 @@ void SetupAndRunSimulation()
     ImmersedBoundaryCellPopulation<2> cell_population(*p_mesh, cells);
     cell_population.SetIfPopulationHasActiveSources(false);
     cell_population.SetInteractionDistance(interaction_dist);
-
     cell_population.SetReMeshFrequency(remesh_freq);
     cell_population.SetOutputNodeRegionToVtk(true);
 
@@ -198,6 +201,7 @@ void SetupAndRunSimulation()
     p_main_modifier->SetNoiseSkip(4u);
     p_main_modifier->SetNoiseStrength(normal_std);
     p_main_modifier->SetAdditiveNormalNoise(true);
+    p_main_modifier->SetZeroFieldSums(true);
     simulator.AddSimulationModifier(p_main_modifier);
 
     auto p_svg_writer = boost::make_shared<ThreeRegionSvgWriter<2>>();
@@ -222,13 +226,14 @@ void SetupAndRunSimulation()
     p_boundary_force->SetLaminaRestLength(cor_rest_length);
     p_boundary_force->SetApicalWellDepthMult(apical_lam_mult);
     p_boundary_force->SetStiffnessMult(stiffness_mult);
+    p_boundary_force->SetSupportStrength(supp_strength);
     p_boundary_force->SetRegionSizes(region_sizes);
 
     auto p_cell_cell_force = boost::make_shared<ThreeRegionInteractionForces<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
     p_cell_cell_force->SetBasicInteractionStrength(tra_spring_const);
-    p_cell_cell_force->SetBasicInteractionDist(interaction_dist * tra_rest_length);
-    p_cell_cell_force->SetAdhesionMultiplier(4.0);
+    p_cell_cell_force->SetBasicInteractionDist(tra_rest_length);
+    p_cell_cell_force->SetAdhesionMultiplier(apical_apical_mult);
     p_cell_cell_force->SetRegionSizes(region_sizes);
 
 
