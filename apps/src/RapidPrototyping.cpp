@@ -200,7 +200,7 @@ void SetupAndRunSimulation()
     p_main_modifier->SetNoiseLengthScale(0.03);
     p_main_modifier->SetNoiseSkip(4u);
     p_main_modifier->SetNoiseStrength(normal_std);
-    p_main_modifier->SetAdditiveNormalNoise(true);
+    p_main_modifier->SetAdditiveNormalNoise(false);
     p_main_modifier->SetZeroFieldSums(true);
     simulator.AddSimulationModifier(p_main_modifier);
 
