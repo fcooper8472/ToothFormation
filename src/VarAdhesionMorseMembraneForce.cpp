@@ -171,7 +171,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         unsigned next_idx = (node_idx + 1) % num_nodes;
 
         // If element rather than lamina, calculate the stiffness multiplier
-        double stiffness_mult = 1.0;//CalculateStiffnessMult(elem_region, rElement.GetNode(node_idx)->GetRegion(), elem_idx, gradient_weight);
+        double stiffness_mult = CalculateStiffnessMult(elem_region, rElement.GetNode(node_idx)->GetRegion(), elem_idx, gradient_weight);
 
         // Morse force (derivative of Morse potential wrt distance between nodes
         force_to_next[node_idx] = rCellPopulation.rGetMesh().GetVectorFromAtoB(rElement.GetNodeLocation(node_idx),
