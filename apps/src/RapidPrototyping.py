@@ -38,34 +38,46 @@ path_to_movies = os.path.join(path_to_output, 'movies')
 if not(os.path.isfile(executable)):
     quit('Py: Could not find executable: ' + executable)
 
-# List of command line arguments for the executable, and corresponding list of parameter names
-command_line_args = [' --ID ', ' --CRL ', ' --CSC ', ' --SUP ', ' --TRL ', ' --TSC ', ' --KFS ', ' --ALM ', ' --DI ',
-                     ' --SM ', ' --AAM ', ' --NS ', ' --RM ', ' --TS ', ' --AL ']
-params_list = ['simulation_id', 'cor_rest_length', 'cor_spring_const', 'support_strenght', 'tra_rest_length',
-               'tra_spring_const', 'kinematic_strength', 'apical_lam_mult', 'interaction_dist', 'stiffness_mult',
-               'ap-ap_mult', 'normal_std', 'remesh_frequency', 'num_time_steps', 'apical_lamina']
 
 # Time string when script is run, used for creating a unique archive name
 today = time.strftime('%Y-%m-%dT%H%M')
 
-# Param ranges (in lists, for itertools product)
-crl = [0.25]
-csc = np.linspace(1.0 * 1e8, 0.8 * 1e8, num=1)
-sup = [0.01]
-trl = [0.25]  # multiple of the interaction distance
-tsc = np.linspace(1.0 * 1e7, 1.4 * 1e7, num=1)
-kfs = np.linspace(1.0, 3.0, num=1)
-alm = np.linspace(0.1, 0.2, num=1)
-di = np.linspace(0.02, 0.05, num=1)
-sm = np.linspace(0.8, 0.6, num=2)
-aam = np.linspace(4.0, 4.0, num=1)
-ns = [1e2]
-rf = [50]
-ts = [5000]
-al = [False]*1
 
-# An enumerated iterable containing every combination of the parameter ranges defined above
-combined_iterable = list(itertools.product(crl, csc, sup, trl, tsc, kfs, alm, di, sm, aam, ns, rf, ts, al))
+# List of command line arguments for the executable, with value ranges and descriptive names
+command_line_args = {
+    'CRL': {'name': 'cor_rest_length',
+            'vals': [0.25]},
+    'CSC': {'name': 'cor_spring_const',
+            'vals': np.linspace(1.0 * 1e8, 0.8 * 1e8, num=1)},
+    'SUP': {'name': 'support_strenght',
+            'vals': np.linspace(0.005, 0.0, num=1)},
+    'TRL': {'name': 'tra_rest_length',
+            'vals': [0.25]},
+    'TSC': {'name': 'tra_spring_const',
+            'vals': np.linspace(1.0 * 1e7, 1.4 * 1e7, num=1)},
+    'KFS': {'name': 'kinematic_strength',
+            'vals': np.linspace(1.0, 3.0, num=1)},
+    'ALM': {'name': 'apical_lam_mult',
+            'vals': np.linspace(0.1, 0.2, num=1)},
+    'DI': {'name': 'interaction_dist',
+           'vals': np.linspace(0.02, 0.05, num=1)},
+    'SM': {'name': 'stiffness_mult',
+           'vals': np.linspace(0.9, 0.7, num=2)},
+    'AAM': {'name': 'ap-ap_mult',
+            'vals': np.linspace(3.0, 3.0, num=1)},
+    'NS': {'name': 'normal_std',
+           'vals': [1e2]},
+    'RM': {'name': 'remesh_frequency',
+           'vals': [50]},
+    'TS': {'name': 'num_time_steps',
+           'vals': [10000]},
+    'AL': {'name': 'apical_lamina',
+           'vals': [False]*1},
+}
+
+# Take the cartesian product of all 'vals' to form each parameter set, and give each a unique ID
+product_of_vals = itertools.product(*[command_line_args[x]['vals'] for x in command_line_args])
+param_sets_with_id = [[i] + list(t) for i, t in enumerate(product_of_vals)]
 
 
 def main():
@@ -88,6 +100,10 @@ def run_simulations():
 
     print("Py: Starting simulations with " + str(mp.cpu_count()) + " processes")
 
+    # Generate lists of descriptive names, and tags for command line arguments
+    param_names = ['simulation_id'] + [command_line_args[x]['name'] for x in command_line_args]
+    command_tags = [' --%s ' % x for x in ['ID'] + command_line_args.keys()]
+
     # Make a list of calls to a Chaste executable
     command_list = []
 
@@ -95,23 +111,13 @@ def run_simulations():
         os.makedirs(path_to_output)
 
     params_file = open(path_to_output + '/params_file.csv', 'w')
-    params_file.write(','.join(params_list) + '\n')
+    params_file.write(','.join(param_names) + '\n')
 
-    base_command = 'nice -n 19 ' + executable
+    base_command = 'nice -n 0 ' + executable
 
-    for idx, param_set in enumerate(combined_iterable):
-
-        params_file.write(str(idx) + ',' + ",".join(map(str, param_set)) + '\n')
-
-        this_command = base_command
-        this_command += ' --ID ' + str(idx)
-
-        for arg in range(len(param_set)):
-            this_command += command_line_args[arg+1] + str(param_set[arg])
-
-        command_list.append(this_command)
-
-        print(this_command)
+    for param_set in param_sets_with_id:
+        params_file.write(','.join(map(str, param_set)) + '\n')
+        command_list.append(base_command + ''.join([tag + val for tag, val in zip(command_tags, map(str, param_set))]))
 
     params_file.close()
 
@@ -186,8 +192,11 @@ def combine_output():
     combined_results = []
     results_header = []
 
-    for idx, param_set in enumerate(combined_iterable):
-        results_file = os.path.join(path_to_output, 'sim', str(idx), 'results.csv')
+    for param_set in param_sets_with_id:
+
+        unique_idx = param_set[0]
+
+        results_file = os.path.join(path_to_output, 'sim', str(unique_idx), 'results.csv')
 
         if os.path.isfile(results_file):
             with open(results_file, 'r') as local_results:
@@ -200,7 +209,7 @@ def combine_output():
                 # Store the results (second line of the results file) in the combined_results list
                 combined_results.append(local_results.readline().strip('\n'))
         else:  # results file does not exist
-            combined_results.append(str(idx) + ',' + 'simulation_incomplete')
+            combined_results.append(str(unique_idx) + ',' + 'simulation_incomplete')
 
     # All simulations failed, so no header was read from any results file
     if not results_header:
