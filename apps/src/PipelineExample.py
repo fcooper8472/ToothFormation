@@ -62,12 +62,12 @@ param_sets_with_id = [[i] + list(t) for i, t in enumerate(product_of_vals)]
 
 
 def main():
-    # clean_output_dir()
+    clean_output_dir()
     run_simulations()
-    # combine_output()
-    # make_movies_parallel()
-    # generate_html()
-    # compress_output()
+    combine_output()
+    make_movies_parallel()
+    generate_html()
+    compress_output()
 
 
 # Delete output directory
@@ -102,12 +102,11 @@ def run_simulations():
 
     params_file.close()
 
-    print('\n'.join(command_list))
-    # # Generate a pool of workers
-    # pool = mp.Pool(processes=mp.cpu_count())
-    #
-    # # Pass the list of bash commands to the pool and wait at most one day
-    # pool.map_async(execute_command, command_list).get(86400)
+    # Generate a pool of workers
+    pool = mp.Pool(processes=mp.cpu_count())
+
+    # Pass the list of bash commands to the pool and wait at most one day
+    pool.map_async(execute_command, command_list).get(86400)
 
 
 # Helper function for run_simulation that runs bash commands in separate processes
