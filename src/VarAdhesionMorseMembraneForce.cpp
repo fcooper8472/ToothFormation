@@ -163,6 +163,12 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
 
     const double gradient_weight = mid_of_gradient + 2.0 * (end_of_gradient - mid_of_gradient) * dist_from_centre;
 
+    // Regular element
+    if (ELEMENT_DIM == DIM)
+    {
+        well_depth *= 1.0 - gradient_weight;
+    }
+
 
     // Loop over nodes and calculate the force exerted on node i+1 by node i
     for (unsigned node_idx = 0; node_idx < num_nodes; node_idx++)
