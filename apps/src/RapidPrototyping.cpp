@@ -88,13 +88,13 @@ int main(int argc, char* argv[])
     general_options.add_options()
         ("help", "produce help message")
         ("ID", bpo::value<std::string>(),"ID string for the simulation")
-        ("CRL", bpo::value<double>()->default_value(0.0),"Cortical rest length")
+        ("CRL", bpo::value<double>()->default_value(0.25),"Cortical rest length")
         ("CSC", bpo::value<double>()->default_value(0.0),"Cortical spring constant")
         ("SUP", bpo::value<double>()->default_value(0.0),"Support strength")
-        ("TRL", bpo::value<double>()->default_value(0.0),"Transmembrane rest length")
+        ("TRL", bpo::value<double>()->default_value(0.25),"Transmembrane rest length")
         ("TSC", bpo::value<double>()->default_value(0.0),"Transmembrane spring constant")
         ("KFS", bpo::value<double>()->default_value(0.0),"Kinematic Feedback strength")
-        ("ALM", bpo::value<double>()->default_value(0.0),"Apical lamina stiffness multiplier")
+        ("ALM", bpo::value<double>()->default_value(1.0),"Apical lamina stiffness multiplier")
         ("DI", bpo::value<double>()->default_value(0.0),"Interaction distance for cell-cell forces")
         ("SM", bpo::value<double>()->default_value(0.0),"Stiffness multiplier for membrane forces")
         ("AAM", bpo::value<double>()->default_value(0.0),"Apical-apical interaction multiplier")
@@ -200,7 +200,7 @@ void SetupAndRunSimulation()
     p_main_modifier->SetNoiseLengthScale(0.03);
     p_main_modifier->SetNoiseSkip(4u);
     p_main_modifier->SetNoiseStrength(normal_std);
-    p_main_modifier->SetAdditiveNormalNoise(false);
+    p_main_modifier->SetAdditiveNormalNoise(true);
     p_main_modifier->SetZeroFieldSums(true);
     simulator.AddSimulationModifier(p_main_modifier);
 
@@ -224,7 +224,7 @@ void SetupAndRunSimulation()
     p_boundary_force->SetElementRestLength(cor_rest_length);
     p_boundary_force->SetLaminaWellDepth(2.0 * cor_spring_const);
     p_boundary_force->SetLaminaRestLength(cor_rest_length);
-    p_boundary_force->SetApicalWellDepthMult(apical_lam_mult);
+//    p_boundary_force->SetApicalWellDepthMult(apical_lam_mult);
     p_boundary_force->SetStiffnessMult(stiffness_mult);
     p_boundary_force->SetSupportStrength(supp_strength);
     p_boundary_force->SetRegionSizes(region_sizes);
@@ -270,22 +270,12 @@ void SetupAndRunSimulation()
     }
 
     // Calculate the maximal height variation along the lamina
-    double max_y = 0.0;
-    double min_y = 1.0;
-
+    std::vector<double> lamina_y_vals;
     for (unsigned node_idx = 0; node_idx < p_mesh->GetLamina(0)->GetNumNodes(); node_idx++)
     {
-        double this_y = p_mesh->GetLamina(0)->GetNode(node_idx)->rGetLocation()[1];
-
-        if (this_y > max_y)
-        {
-            max_y = this_y;
-        }
-        if (this_y < min_y)
-        {
-            min_y = this_y;
-        }
+        lamina_y_vals.push_back(p_mesh->GetLamina(0)->GetNode(node_idx)->rGetLocation()[1]);
     }
+    auto minmax_y_vals = std::minmax_element(lamina_y_vals.begin(), lamina_y_vals.end());
 
     double vol_end = p_mesh->GetVolumeOfElement(4u);
 
@@ -311,11 +301,24 @@ void SetupAndRunSimulation()
 
     const double lean_mean = std::accumulate(leans.begin(), leans.end(), 0.0) / leans.size();
     const double lean_var = std::inner_product(leans.begin(), leans.end(), leans.begin(), 0.0) / leans.size() - lean_mean * lean_mean;
-    const double skew_4 = p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(4, unit_vector<double>(2, 0));
+
+    // Calculate the average (absolute) skew of non-central elements about long axis
+    std::vector<double> abs_skews;
+    for (unsigned elem_idx = 0; elem_idx < p_mesh->GetNumElements(); ++elem_idx)
+    {
+        // Ignore the central cells
+        if (elem_idx < region_sizes[0] || elem_idx >= region_sizes[0] + region_sizes[1])
+        {
+            // Get and orient the short axis
+            const auto skew = p_mesh->GetSkewnessOfElementMassDistributionAboutAxis(elem_idx, unit_vector<double>(2, 0));
+            abs_skews.push_back(std::fabs(skew));
+        }
+    }
+
+    const double skew_mean = std::accumulate(abs_skews.begin(), abs_skews.end(), 0.0) / abs_skews.size();
+    const double skew_var = std::inner_product(abs_skews.begin(), abs_skews.end(), abs_skews.begin(), 0.0) / abs_skews.size() - skew_mean * skew_mean;
 
     PRINT_VECTOR(leans);
-
-
     PRINT_VARIABLE(vol_end / vol_start);
 
     OutputFileHandler results_handler(output_directory.str(), false);
@@ -324,19 +327,19 @@ void SetupAndRunSimulation()
     // Output summary statistics to results file
     (*results_file) << "id,"
                     << "max_y_var,"
-                    << "asymmetry_measure,"
-                    << "lamina_lean,"
+                    << "skew_mean,"
+                    << "skew_std,"
                     << "lean_mean,"
                     << "lean_std"
                     << std::endl;
 
+
     (*results_file) << id_string << ","
-                    << std::to_string(max_y - min_y) << ","
-                    << std::to_string(atan((max_y - min_y) / 0.5)) << ","
-                    << std::to_string(skew_4) << ","
+                    << std::to_string(*minmax_y_vals.second - *minmax_y_vals.first) << ","
+                    << std::to_string(skew_mean) << ","
+                    << std::to_string(std::sqrt(skew_var)) << ","
                     << std::to_string(lean_mean) << ","
                     << std::to_string(std::sqrt(lean_var));
-
     // Tidy up
     results_file->close();
 }
