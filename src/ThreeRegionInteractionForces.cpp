@@ -243,64 +243,31 @@ double ThreeRegionInteractionForces<DIM>::CalculateElementTypeMult(Node<DIM>* pN
 {
     double type_mult = 1.0;
 
-    unsigned elem_type_a = GetElemType(pNodeA);
-    unsigned elem_type_b = GetElemType(pNodeB);
+    // Predicate to query whether a given node is right or left apical
+    auto is_apical_node = [](Node<DIM>* const p_node)->bool
+    {
+        unsigned region = p_node->GetRegion();
+        return region == RIGHT_APICAL_REGION || region == LEFT_APICAL_REGION;
+    };
 
-    unsigned region_a = pNodeA->GetRegion();
-    unsigned region_b = pNodeB->GetRegion();
+    // First, if either belong to the lamina, return
+    for (const auto& p_node : {pNodeA, pNodeB})
+    {
+        unsigned elem_type = GetElemType(p_node);
 
-    if (region_a == RIGHT_APICAL_REGION || region_a == RIGHT_PERIAPICAL_REGION ||
-        region_a == LEFT_APICAL_REGION || region_a == LEFT_PERIAPICAL_REGION)
+        // If either of the nodes is lamina region, just set the relevant type multiplier and stop
+        if (elem_type == THREE_REGION_LAMINA)
+        {
+            type_mult = 2.0;
+            break;
+        }
+    }
+
+    // If both are apical, the multiplier is the given member variable
+    if (is_apical_node(pNodeA) && is_apical_node(pNodeB))
     {
         type_mult = mAdhesionMultiplier;
     }
-
-    if (region_b == RIGHT_APICAL_REGION || region_b == RIGHT_PERIAPICAL_REGION ||
-        region_b == LEFT_APICAL_REGION || region_b == LEFT_PERIAPICAL_REGION)
-    {
-        type_mult = mAdhesionMultiplier;
-    }
-
-//    if (elem_type_b == THREE_REGION_MID || elem_type_a == THREE_REGION_MID)
-//    {
-//        return type_mult;
-//    }
-
-//    if (region_a == RIGHT_APICAL_REGION || region_a == LEFT_APICAL_REGION)
-//    {
-//        type_mult = mAdhesionMultiplier;
-//    }
-//
-//    if (region_b == RIGHT_APICAL_REGION || region_b == LEFT_APICAL_REGION)
-//    {
-//        type_mult = mAdhesionMultiplier;
-//    }
-
-//    if (region_b == RIGHT_LATERAL_REGION || region_b == LEFT_LATERAL_REGION || region_a == RIGHT_LATERAL_REGION || region_a == LEFT_LATERAL_REGION)
-//    {
-//        type_mult = 0.0;
-//    }
-
-    if (elem_type_a == THREE_REGION_LAMINA || elem_type_b == THREE_REGION_LAMINA)
-    {
-        type_mult *= 2.0;
-    }
-
-//    if (elem_type_a == THREE_REGION_MID)
-//    {
-//        if (region_a == LEFT_BASAL_REGION || region_a == RIGHT_BASAL_REGION)
-//        {
-//            type_mult = 2.0;
-//        }
-//    }
-//
-//    if (elem_type_b == THREE_REGION_MID)
-//    {
-//        if (region_b == LEFT_BASAL_REGION || region_b == RIGHT_BASAL_REGION)
-//        {
-//            type_mult = 2.0;
-//        }
-//    }
 
     return type_mult;
 }
