@@ -159,7 +159,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
     const double dist_from_centre = std::fabs(r_mesh.GetVectorFromAtoB(elem_centroid, mid_centroid)[0]);
 
     const double end_of_gradient = 1.0 * mStiffnessMult;
-    const double mid_of_gradient = 1.0;
+    const double mid_of_gradient = 0.5 * (1.0 + mStiffnessMult);
 
     const double gradient_weight = mid_of_gradient + 2.0 * (end_of_gradient - mid_of_gradient) * dist_from_centre;
 

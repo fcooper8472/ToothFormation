@@ -62,9 +62,9 @@ command_line_args = {
     'DI': {'name': 'interaction_dist',
            'vals': np.linspace(0.02, 0.05, num=1)},
     'SM': {'name': 'inner_corner_stiffness_mult',
-           'vals': np.linspace(0.5, 0.6, num=2)},
+           'vals': np.linspace(0.5, 0.6, num=1)},
     'AAM': {'name': 'ap-ap_mult',
-            'vals': np.linspace(2.0, 3.0, num=2)},
+            'vals': np.linspace(2.5, 3.0, num=1)},
     'NS': {'name': 'normal_std',
            'vals': [1e2]},
     'RM': {'name': 'remesh_frequency',
@@ -86,7 +86,7 @@ def main():
     combine_output()
     make_movies_parallel()
     generate_html()
-    # compress_output()
+    compress_output()
 
 
 # Delete output directory
