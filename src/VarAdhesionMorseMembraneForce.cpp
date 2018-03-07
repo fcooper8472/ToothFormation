@@ -173,16 +173,16 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         // If element rather than lamina, calculate the stiffness multiplier
         double stiffness_mult = CalculateStiffnessMult(elem_region, rElement.GetNode(node_idx)->GetRegion(), elem_idx, gradient_weight);
 
-        // If lamina, alter the stiffness multiplier based on node location
-        if (elem_region == 3)
-        {
-            const double val_at_half = mLaminaGradientStrength;
-            const double val_at_end = 1.0;
-
-            const double dist_from_half = std::fabs(0.5 - rElement.GetNodeLocation(node_idx)[0]);
-
-            stiffness_mult *= val_at_half + 2.0 * (val_at_end - val_at_half) * dist_from_half;
-        }
+        // If lamina, alter the stiffness multiplier based on node location (variable_lamina_stiffness tag in repo)
+//        if (elem_region == 3)
+//        {
+//            const double val_at_half = mLaminaGradientStrength;
+//            const double val_at_end = 1.0;
+//
+//            const double dist_from_half = std::fabs(0.5 - rElement.GetNodeLocation(node_idx)[0]);
+//
+//            stiffness_mult *= val_at_half + 2.0 * (val_at_end - val_at_half) * dist_from_half;
+//        }
 
         // Morse force (derivative of Morse potential wrt distance between nodes
         force_to_next[node_idx] = rCellPopulation.rGetMesh().GetVectorFromAtoB(rElement.GetNodeLocation(node_idx),
@@ -316,12 +316,23 @@ double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(
 {
     double stiffness_mult = 1.0;
 
+    const double inner = 1.4;
+    const double outer = 0.6;
+
     // Left
     if (elem_region == 0)
     {
         if (node_region == RIGHT_APICAL_REGION)// || node_region == RIGHT_PERIAPICAL_REGION)
         {
             stiffness_mult = gradientWeight;
+        }
+        else if (node_region == RIGHT_LATERAL_REGION) // inner lateral
+        {
+            stiffness_mult = inner;
+        }
+        else if (node_region == LEFT_LATERAL_REGION) // outer lateral
+        {
+            stiffness_mult = outer;
         }
     }
     // Right
@@ -330,6 +341,14 @@ double VarAdhesionMorseMembraneForce<DIM>::CalculateStiffnessMult(
         if (node_region == LEFT_APICAL_REGION)// || node_region == LEFT_PERIAPICAL_REGION)
         {
             stiffness_mult = gradientWeight;
+        }
+        else if (node_region == LEFT_LATERAL_REGION) // inner lateral
+        {
+            stiffness_mult = inner;
+        }
+        else if (node_region == RIGHT_LATERAL_REGION) // outer lateral
+        {
+            stiffness_mult = outer;
         }
     }
     // Centre
