@@ -98,9 +98,6 @@ private:
     /** Strength of the springs used to support the cell's shape */
     double mSupportStrength;
 
-    /** Strength multiplier in the centre of the lamina */
-    double mLaminaGradientStrength;
-
     /**
      * Array representing the number of elements in each of the three regions
      */
@@ -203,12 +200,6 @@ public:
 
     /** @param supportStrength the new value of mSupportStrength */
     void SetSupportStrength(double supportStrength);
-
-    /** @return mLaminaGradientStrength */
-    double GetLaminaGradientStrength() const;
-
-    /** @param laminaGradientStrength the new value of mLaminaGradientStrength */
-    void SetLaminaGradientStrength(double laminaGradientStrength);
 
     /** @return mRegionSizes */
     const std::array<unsigned int, 3>& GetRegionSizes() const;
