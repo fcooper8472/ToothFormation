@@ -163,12 +163,6 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
 
     const double gradient_weight = mid_of_gradient + 2.0 * (end_of_gradient - mid_of_gradient) * dist_from_centre;
 
-    // Regular element
-    if (ELEMENT_DIM == DIM)
-    {
-        well_depth *= 1.0 - gradient_weight;
-    }
-
 
     // Loop over nodes and calculate the force exerted on node i+1 by node i
     for (unsigned node_idx = 0; node_idx < num_nodes; node_idx++)
@@ -178,6 +172,17 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
 
         // If element rather than lamina, calculate the stiffness multiplier
         double stiffness_mult = CalculateStiffnessMult(elem_region, rElement.GetNode(node_idx)->GetRegion(), elem_idx, gradient_weight);
+
+        // If lamina, alter the stiffness multiplier based on node location
+        if (elem_region == 3)
+        {
+            const double val_at_half = mLaminaGradientStrength;
+            const double val_at_end = 1.0;
+
+            const double dist_from_half = std::fabs(0.5 - rElement.GetNodeLocation(node_idx)[0]);
+
+            stiffness_mult *= val_at_half + 2.0 * (val_at_end - val_at_half) * dist_from_half;
+        }
 
         // Morse force (derivative of Morse potential wrt distance between nodes
         force_to_next[node_idx] = rCellPopulation.rGetMesh().GetVectorFromAtoB(rElement.GetNodeLocation(node_idx),
@@ -455,6 +460,18 @@ template<unsigned int DIM>
 void VarAdhesionMorseMembraneForce<DIM>::SetSupportStrength(double supportStrength)
 {
     mSupportStrength = supportStrength;
+}
+
+template<unsigned int DIM>
+double VarAdhesionMorseMembraneForce<DIM>::GetLaminaGradientStrength() const
+{
+    return mLaminaGradientStrength;
+}
+
+template<unsigned int DIM>
+void VarAdhesionMorseMembraneForce<DIM>::SetLaminaGradientStrength(double laminaGradientStrength)
+{
+    mLaminaGradientStrength = laminaGradientStrength;
 }
 
 // Explicit instantiation
