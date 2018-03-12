@@ -46,7 +46,9 @@ VarAdhesionMorseMembraneForce<DIM>::VarAdhesionMorseMembraneForce()
           mLaminaRestLength(0.5),
           mApicalWellDepthMult(1.0),
           mWellWidth(0.25),
-          mStiffnessMult(1.0)
+          mStiffnessMult(1.0),
+          mCyclicFrequency(1.0),
+          mElementPhases()
 {
 }
 
@@ -59,6 +61,17 @@ void VarAdhesionMorseMembraneForce<DIM>::AddImmersedBoundaryForceContribution(st
     if (std::accumulate(mRegionSizes.begin(), mRegionSizes.end(), 0u) != p_mesh->GetNumElements())
     {
         EXCEPTION("mRegionSizes must be set to the correct number of elements");
+    }
+
+    // Only fill phases once
+    if (mElementPhases.empty())
+    {
+        // Fill a vector with random phases in [0, 2pi), one phase for each element in the mesh
+        mElementPhases.resize(p_mesh->GetNumElements());
+        std::generate(mElementPhases.begin(), mElementPhases.end(), []()
+        {
+            return 2.0 * M_PI * RandomNumberGenerator::Instance()->ranf();
+        });
     }
 
     // Data common across the entire cell population
@@ -159,10 +172,15 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
     const double dist_from_centre = std::fabs(r_mesh.GetVectorFromAtoB(elem_centroid, mid_centroid)[0]);
 
     const double end_of_gradient = 1.0 * mStiffnessMult;
-    const double mid_of_gradient = 0.5 * (1.0 + mStiffnessMult);
+    const double mid_of_gradient = 1.0 * mStiffnessMult;
 
-    const double gradient_weight = mid_of_gradient + 2.0 * (end_of_gradient - mid_of_gradient) * dist_from_centre;
+    double gradient_weight = mid_of_gradient + 2.0 * (end_of_gradient - mid_of_gradient) * dist_from_centre;
 
+    // A unique phase per element means random coupling, but a fixed frequency
+    const double cyclic_argument = mElementPhases[elem_idx] + mCyclicFrequency * SimulationTime::Instance()->GetTime();
+
+    // The function 1 + 0.5 sin(x) is a number cyclicly oscillating between 0 and 1
+    gradient_weight += 0.5 * (1.0 - gradient_weight) * (1.0 + sin(2.0 * M_PI * cyclic_argument));
 
     // Loop over nodes and calculate the force exerted on node i+1 by node i
     for (unsigned node_idx = 0; node_idx < num_nodes; node_idx++)
@@ -449,6 +467,18 @@ template<unsigned int DIM>
 void VarAdhesionMorseMembraneForce<DIM>::SetSupportStrength(double supportStrength)
 {
     mSupportStrength = supportStrength;
+}
+
+template<unsigned int DIM>
+double VarAdhesionMorseMembraneForce<DIM>::GetCyclicFrequency() const
+{
+    return mCyclicFrequency;
+}
+
+template<unsigned int DIM>
+void VarAdhesionMorseMembraneForce<DIM>::SetCyclicFrequency(double cyclicFrequency)
+{
+    mCyclicFrequency = cyclicFrequency;
 }
 
 

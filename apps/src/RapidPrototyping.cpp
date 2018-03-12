@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
         ("SM", bpo::value<double>()->default_value(0.0),"Stiffness multiplier for membrane forces")
         ("AAM", bpo::value<double>()->default_value(0.0),"Apical-apical interaction multiplier")
         ("NS", bpo::value<double>()->default_value(0.0),"Standard deviation for normal noise")
-        ("LGS", bpo::value<double>()->default_value(0.0),"Strength multiplier in the centre of the lamina")
+        ("CYF", bpo::value<double>()->default_value(1.0),"Cyclic frequency for stiffness modulation")
         ("RM", bpo::value<unsigned>()->default_value(1u),"ReMesh frequency")
         ("TS", bpo::value<unsigned>()->default_value(1000u),"Number of time steps")
         ("AL", bpo::value<bool>()->default_value(false),"Whether to include apical lamina");
@@ -160,7 +160,7 @@ void SetupAndRunSimulation()
     double stiffness_mult = gVariablesMap["SM"].as<double>();
     double apical_apical_mult = gVariablesMap["AAM"].as<double>();
     double normal_std = gVariablesMap["NS"].as<double>();
-    double lamina_grad_str = gVariablesMap["LGS"].as<double>();
+    double cyclic_frequency = gVariablesMap["CYF"].as<double>();
     unsigned remesh_freq = gVariablesMap["RM"].as<unsigned>();
     unsigned num_time_steps = gVariablesMap["TS"].as<unsigned>();
     bool apical_lamina = gVariablesMap["AL"].as<bool>();
@@ -230,9 +230,7 @@ void SetupAndRunSimulation()
     p_boundary_force->SetStiffnessMult(stiffness_mult);
     p_boundary_force->SetSupportStrength(supp_strength);
     p_boundary_force->SetRegionSizes(region_sizes);
-    p_boundary_force->SetLaminaGradientStrength(lamina_grad_str);
-
-    PRINT_VARIABLE(lamina_grad_str);
+    p_boundary_force->SetCyclicFrequency(0.05);
 
     auto p_cell_cell_force = boost::make_shared<ThreeRegionInteractionForces<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
@@ -248,7 +246,7 @@ void SetupAndRunSimulation()
     simulator.SetOutputDirectory(output_directory.str());
 
     // Calculate sampling multiple to have at least 5 frames per second on a 8 second video
-    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (5.0 * 4.0))));
+    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (5.0 * 15.0))));
 
     // Set simulation properties
     double dt = 0.01;

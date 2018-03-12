@@ -62,17 +62,17 @@ command_line_args = {
     'DI': {'name': 'interaction_dist',
            'vals': np.linspace(0.02, 0.05, num=1)},
     'SM': {'name': 'inner_corner_stiffness_mult',
-           'vals': np.linspace(0.7, 0.6, num=1)},
+           'vals': np.linspace(0.6, 0.8, num=1)},
     'AAM': {'name': 'ap-ap_mult',
-            'vals': np.linspace(2.5, 3.0, num=1)},
+            'vals': np.linspace(2.0, 2.0, num=1)},
     'NS': {'name': 'normal_std',
-           'vals': [1e2]},
-    # 'LGS': {'name': 'lamina_grad_str',
-    #         'vals': np.linspace(0.6, 0.9, num=4)},
+           'vals': [1e1]},
+    'CYF': {'name': 'cyclic_freq',
+            'vals': np.linspace(0.01, 0.01, num=1)},
     'RM': {'name': 'remesh_frequency',
-           'vals': [50]*4},
+           'vals': [50]},
     'TS': {'name': 'num_time_steps',
-           'vals': [15000]},
+           'vals': [50000]},
     # 'AL': {'name': 'apical_lamina',
     #        'vals': [False]*1},
 }
@@ -146,7 +146,7 @@ def make_movies_parallel():
     if not (os.path.isdir(path_to_sims)):
         quit("Py: Could not find simulation output directory: " + path_to_sims)
 
-    # Convert all svg to png using cairosvg
+    # Convert all svg to png using cairosvg \todo this is temporarily being done from std::system in C++
     svg_to_png.svg_to_png(path_to_output)
 
     # Create a set of directories containing any png results files
@@ -166,7 +166,7 @@ def make_movies_parallel():
             quit('Py: Could not determine simulation index from directory string: ' + data_dir)
         idx = int(index_match.group(1))
 
-        command_list.append((data_dir, str(idx).zfill(2) + '.mp4', 8.0, False))
+        command_list.append((data_dir, str(idx).zfill(2) + '.mp4', 15.0, False))
 
     # Generate a pool of workers
     pool = mp.Pool(processes=mp.cpu_count())

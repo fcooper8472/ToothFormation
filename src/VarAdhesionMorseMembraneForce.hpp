@@ -98,10 +98,16 @@ private:
     /** Strength of the springs used to support the cell's shape */
     double mSupportStrength;
 
+    /** Frequency of oscillation for cyclic stiffness calculation */
+    double mCyclicFrequency;
+
     /**
      * Array representing the number of elements in each of the three regions
      */
     std::array<unsigned, 3> mRegionSizes;
+
+    /** Vector containing a random phase in [0, 2pi) for use in cyclic stiffness calculation */
+    std::vector<double> mElementPhases;
 
     /**
      * Helper method for CalculateForcesOnElement().
@@ -200,6 +206,12 @@ public:
 
     /** @param supportStrength the new value of mSupportStrength */
     void SetSupportStrength(double supportStrength);
+
+    /** @return mCyclicFrequency */
+    double GetCyclicFrequency() const;
+
+    /** @param cyclicFrequency the new value of mCyclicFrequency */
+    void SetCyclicFrequency(double cyclicFrequency);
 
     /** @return mRegionSizes */
     const std::array<unsigned int, 3>& GetRegionSizes() const;
