@@ -101,6 +101,9 @@ private:
     /** Frequency of oscillation for cyclic stiffness calculation */
     double mCyclicFrequency;
 
+    /** The proportion of each cycle at which the gradient is applied */
+    double mGradientOnProportion;
+
     /**
      * Array representing the number of elements in each of the three regions
      */
@@ -212,6 +215,12 @@ public:
 
     /** @param cyclicFrequency the new value of mCyclicFrequency */
     void SetCyclicFrequency(double cyclicFrequency);
+
+    /** @return mGradientOnProportion */
+    double GetGradientOnProportion() const;
+
+    /** @param gradientOnProportion the new value of mGradientOnProportion */
+    void SetGradientOnProportion(double gradientOnProportion);
 
     /** @return mRegionSizes */
     const std::array<unsigned int, 3>& GetRegionSizes() const;

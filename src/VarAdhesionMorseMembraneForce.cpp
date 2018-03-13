@@ -177,10 +177,11 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
     double gradient_weight = mid_of_gradient + 2.0 * (end_of_gradient - mid_of_gradient) * dist_from_centre;
 
     // A unique phase per element means random coupling, but a fixed frequency
-    const double cyclic_argument = mElementPhases[elem_idx] + mCyclicFrequency * SimulationTime::Instance()->GetTime();
+    const double cyclic_argument = mElementPhases[elem_idx] + 2.0 * M_PI * mCyclicFrequency * SimulationTime::Instance()->GetTime();
+    const bool gradient_on = std::fmod(cyclic_argument, 2.0 * M_PI) > 2.0 * M_PI * (1.0 - mGradientOnProportion);
 
-    // The function 1 + 0.5 sin(x) is a number cyclicly oscillating between 0 and 1
-    gradient_weight += 0.5 * (1.0 - gradient_weight) * (1.0 + sin(2.0 * M_PI * cyclic_argument));
+    // The reduction is either on or off depending on the proportion of on-time
+    gradient_weight = gradient_on ? gradient_weight : 1.0;
 
     // Loop over nodes and calculate the force exerted on node i+1 by node i
     for (unsigned node_idx = 0; node_idx < num_nodes; node_idx++)
@@ -479,6 +480,18 @@ template<unsigned int DIM>
 void VarAdhesionMorseMembraneForce<DIM>::SetCyclicFrequency(double cyclicFrequency)
 {
     mCyclicFrequency = cyclicFrequency;
+}
+
+template<unsigned int DIM>
+double VarAdhesionMorseMembraneForce<DIM>::GetGradientOnProportion() const
+{
+    return mGradientOnProportion;
+}
+
+template<unsigned int DIM>
+void VarAdhesionMorseMembraneForce<DIM>::SetGradientOnProportion(double gradientOnProportion)
+{
+    mGradientOnProportion = gradientOnProportion;
 }
 
 
