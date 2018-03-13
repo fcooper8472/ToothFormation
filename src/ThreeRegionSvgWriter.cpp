@@ -116,6 +116,7 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
         (*svg_file) << "<text x=\"" << 0.05 * mSvgSize << "\" y=\"" << (0.45 + 9.0 / 32.0) * mSvgSize << "\" "
                     << "font-size=\"30px\" font-family=\"monospace\">"
                     << "ts=" << SimulationTime::Instance()->GetTimeStepsElapsed()
+                    << " t=" << SimulationTime::Instance()->GetTime()
                     << "</text>";
 
 
