@@ -111,87 +111,57 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
         }
     }
 
-    // Helper variables for loop
-    double normed_dist;
-    double elem_type_mult;
-
-    // The spring constant will be scaled by an amount determined by the intrinsic spacing
-    double intrinsic_spacing = rCellPopulation.GetIntrinsicSpacing();
-    double node_a_elem_spacing;
-    double node_b_elem_spacing;
-    double elem_spacing;
-
-    // The effective spring constant will be a scaled version of mBasicInteractionStrength
-    double effective_spring_const;
-
-    // Scale the parametric BasicInteractionDist by the cell population interaction length scale
-    const double effective_interaction_dist = mBasicInteractionDist * rCellPopulation.GetInteractionDistance();
-
-    c_vector<double, DIM> vector_between_nodes;
-    c_vector<double, DIM> force_a_to_b;
-    c_vector<double, DIM> force_b_to_a;
-
-    Node<DIM> *p_node_a;
-    Node<DIM> *p_node_b;
-
-    // If using Morse potential, this can be pre-calculated
-    double well_width = 0.25 * rCellPopulation.GetInteractionDistance();
+    // Pre-fetch some values associated with the cell populations
+    const double intrinsic_spacing = rCellPopulation.GetIntrinsicSpacing();
+    const double eff_rest_length = mBasicInteractionDist * rCellPopulation.GetInteractionDistance();
+    const double eff_well_width = 0.25 * rCellPopulation.GetInteractionDistance();
 
     // Loop over all pairs of nodes that might be interacting
-    for (unsigned pair = 0; pair < rNodePairs.size(); pair++)
+    for (const auto& node_pair : rNodePairs)
     {
         /*
         * Interactions only occur between different elements.  Since each node is only ever in a single cell, we can
         * test equality of the first ContainingElement.
         */
-        if (mpMesh->NodesInDifferentElementOrLamina(rNodePairs[pair].first, rNodePairs[pair].second))
+        if (mpMesh->NodesInDifferentElementOrLamina(node_pair.first, node_pair.second))
         {
-            p_node_a = rNodePairs[pair].first;
-            p_node_b = rNodePairs[pair].second;
+            Node<DIM>* const p_node_a = node_pair.first;
+            Node<DIM>* const p_node_b = node_pair.second;
 
-            vector_between_nodes = mpMesh->GetVectorFromAtoB(p_node_a->rGetLocation(), p_node_b->rGetLocation());
-            normed_dist = norm_2(vector_between_nodes);
+            c_vector<double, DIM> vec_a2b = mpMesh->GetVectorFromAtoB(p_node_a->rGetLocation(), p_node_b->rGetLocation());
+            const double normed_dist = norm_2(vec_a2b);
 
             if (normed_dist < rCellPopulation.GetInteractionDistance())
             {
                 // Get the element spacing for each of the nodes concerned and calculate the effective spring constant
-                if (p_node_a->GetRegion() != LAMINA_REGION)
-                {
-                    node_a_elem_spacing = mpMesh->GetAverageNodeSpacingOfElement(*(p_node_a->rGetContainingElementIndices().begin()), false);
-                }
-                else
-                {
-                    node_a_elem_spacing = mpMesh->GetAverageNodeSpacingOfLamina(0, false);
-                }
-                if (p_node_b->GetRegion() != LAMINA_REGION)
-                {
-                    node_b_elem_spacing = mpMesh->GetAverageNodeSpacingOfElement(*(p_node_b->rGetContainingElementIndices().begin()), false);
-                }
-                else
-                {
-                    node_b_elem_spacing = mpMesh->GetAverageNodeSpacingOfLamina(0, false);
-                }
+                const double node_a_elem_spacing = p_node_a->GetRegion() == LAMINA_REGION ?
+                                                   mpMesh->GetAverageNodeSpacingOfLamina(0, false) :
+                                                   mpMesh->GetAverageNodeSpacingOfElement(*(p_node_a->rGetContainingElementIndices().begin()), false);
 
-                elem_spacing = 0.5 * (node_a_elem_spacing + node_b_elem_spacing);
+                const double node_b_elem_spacing = p_node_a->GetRegion() == LAMINA_REGION ?
+                                                   mpMesh->GetAverageNodeSpacingOfLamina(0, false) :
+                                                   mpMesh->GetAverageNodeSpacingOfElement(*(p_node_a->rGetContainingElementIndices().begin()), false);
 
-                effective_spring_const = mBasicInteractionStrength * elem_spacing / intrinsic_spacing;
+                const double elem_spacing = 0.5 * (node_a_elem_spacing + node_b_elem_spacing);
+                const double eff_well_depth = mBasicInteractionStrength * elem_spacing / intrinsic_spacing;
 
-                // Here we calculate the adhesion variation due to node regions
-                elem_type_mult = CalculateElementTypeMult(p_node_a, p_node_b);
+                // Calculate the adhesion variation due to node regions
+                const double elem_type_mult = CalculateElementTypeMult(p_node_a, p_node_b);
+
+
+                const double morse_exp = std::exp((eff_rest_length - normed_dist) / eff_well_width);
 
                 /*
                  * We must scale each applied force by a factor of elem_spacing / local spacing, so that forces
                  * balance when spread to the grid later (where the multiplicative factor is the local spacing)
                  */
-                double morse_exp = exp((effective_interaction_dist - normed_dist) / well_width);
-                vector_between_nodes *= 2.0 * well_width * effective_spring_const * elem_type_mult * morse_exp *
-                                        (1.0 - morse_exp) / normed_dist;
+                vec_a2b *= 2.0 * eff_well_width * eff_well_depth * morse_exp * (1.0 - morse_exp) / normed_dist;
 
-                force_a_to_b = vector_between_nodes * (elem_spacing / node_a_elem_spacing);
-                p_node_a->AddAppliedForceContribution(force_a_to_b);
+                const c_vector<double, DIM> force_a2b = vec_a2b * (elem_spacing / node_a_elem_spacing);
+                p_node_a->AddAppliedForceContribution(force_a2b);
 
-                force_b_to_a = vector_between_nodes * (-1.0 * elem_spacing / node_b_elem_spacing);
-                p_node_b->AddAppliedForceContribution(force_b_to_a);
+                const c_vector<double, DIM> force_b2a = vec_a2b * (-1.0 * elem_spacing / node_b_elem_spacing);
+                p_node_b->AddAppliedForceContribution(force_b2a);
             }
         }
     }
