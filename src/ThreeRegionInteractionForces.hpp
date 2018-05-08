@@ -155,7 +155,7 @@ public:
     /**
      * Destructor.
      */
-    virtual ~ThreeRegionInteractionForces();
+    virtual ~ThreeRegionInteractionForces() = default;
 
     /**
      * Overridden AddImmersedBoundaryForceContribution() method.

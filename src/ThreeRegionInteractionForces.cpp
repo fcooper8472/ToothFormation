@@ -48,11 +48,6 @@ ThreeRegionInteractionForces<DIM>::ThreeRegionInteractionForces()
 {
 }
 
-template<unsigned DIM>
-ThreeRegionInteractionForces<DIM>::~ThreeRegionInteractionForces()
-{
-}
-
 template <unsigned DIM>
 void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std::vector<std::pair<Node<DIM> *, Node<DIM> *> > &rNodePairs,
                                                                              ImmersedBoundaryCellPopulation<DIM> &rCellPopulation)
@@ -65,6 +60,8 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
      *
      * It is assumed that there are (at least initially) 3n+1 cells.
      */
+
+    const double mRepulsionWellDepth = 0.5 * 1e8;
 
     // This will be triggered only once - during simulation set up
     if (mpMesh == NULL)
@@ -143,11 +140,17 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
                                                    mpMesh->GetAverageNodeSpacingOfElement(*(p_node_a->rGetContainingElementIndices().begin()), false);
 
                 const double elem_spacing = 0.5 * (node_a_elem_spacing + node_b_elem_spacing);
-                const double eff_well_depth = mBasicInteractionStrength * elem_spacing / intrinsic_spacing;
 
-                // Calculate the adhesion variation due to node regions
-                const double elem_type_mult = CalculateElementTypeMult(p_node_a, p_node_b);
+                double eff_well_depth = elem_spacing / intrinsic_spacing;
 
+                if (normed_dist < eff_rest_length)
+                {
+                    eff_well_depth *= mRepulsionWellDepth;
+                }
+                else
+                {
+                    eff_well_depth *= mBasicInteractionStrength * CalculateElementTypeMult(p_node_a, p_node_b);
+                }
 
                 const double morse_exp = std::exp((eff_rest_length - normed_dist) / eff_well_width);
 
