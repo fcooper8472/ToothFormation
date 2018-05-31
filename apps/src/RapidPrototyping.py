@@ -48,33 +48,33 @@ command_line_args = {
     # 'CRL': {'name': 'cor_rest_length',
     #         'vals': [0.25]},
     'CSC': {'name': 'cor_spring_const',
-            'vals': np.linspace(1.0 * 1e8, 0.8 * 1e8, num=1)},
+            'vals': np.linspace(1.0 * 1e7, 0.8 * 1e8, num=1)},
     'SUP': {'name': 'support_strenght',
-            'vals': np.linspace(0.0, 0.0, num=1)},
+            'vals': np.linspace(0.01, 0.03, num=1)},
     # 'TRL': {'name': 'tra_rest_length',
     #         'vals': [0.25]},
     'TSC': {'name': 'tra_spring_const',
-            'vals': np.linspace(1.0 * 1e7, 1.4 * 1e7, num=1)},
+            'vals': np.linspace(1.0 * 1e6, 1.4 * 1e7, num=1)},
     # 'KFS': {'name': 'kinematic_strength',
     #         'vals': np.linspace(1.0, 3.0, num=1)},
     # 'ALM': {'name': 'apical_lam_mult',
     #         'vals': np.linspace(0.1, 0.2, num=1)},
     'DI': {'name': 'interaction_dist',
-           'vals': np.linspace(0.02, 0.05, num=1)},
+           'vals': np.linspace(0.025, 0.05, num=1)},
     'SM': {'name': 'inner_corner_stiffness_mult',
-           'vals': np.linspace(0.4, 0.8, num=1)},
+           'vals': np.linspace(0.3, 0.5, num=1)},
     'AAM': {'name': 'ap-ap_mult',
-            'vals': np.linspace(2.0, 2.0, num=1)},
+            'vals': np.linspace(2.0, 3.0, num=1)},
     'NS': {'name': 'normal_std',
-           'vals': [1e1]},
+           'vals': [1.0 * 1e6]},
     'CYF': {'name': 'cyclic_freq',
-            'vals': np.logspace(-3.0, -5.0, num=3, base=2.0)},
+            'vals': np.logspace(-3.0, -5.0, num=1, base=2.0)},
     'GOP': {'name': 'grad_on_prop',
-            'vals': np.linspace(0.25, 0.5, num=1)},
+            'vals': np.linspace(0.5, 0.5, num=1)},
     'RM': {'name': 'remesh_frequency',
            'vals': [50]},
     'TS': {'name': 'num_time_steps',
-           'vals': [10000]},
+           'vals': [30000]*12},
     # 'AL': {'name': 'apical_lamina',
     #        'vals': [False]*1},
 }
@@ -125,6 +125,8 @@ def run_simulations():
 
     params_file.close()
 
+    print(command_list[0])
+
     # Generate a pool of workers
     pool = mp.Pool(processes=mp.cpu_count())
 
@@ -140,6 +142,17 @@ def execute_command(cmd):
 # Make an mp4 from each svg output
 def make_movies_parallel():
 
+    # First determine whether the mp4 files have already been created (from C++ with std::system call)
+    mp4_already_generated = False
+    for root, dirs, files in os.walk(path_to_sims):
+        for f in files:
+            if f.endswith('.mp4'):
+                mp4_already_generated = True
+
+    if mp4_already_generated:
+        print("Py: Not generating mp4s")
+        return
+
     print("Py: Combining chaste output to movies with " + str(mp.cpu_count()) + " processes")
 
     # Validate output directories
@@ -148,7 +161,7 @@ def make_movies_parallel():
     if not (os.path.isdir(path_to_sims)):
         quit("Py: Could not find simulation output directory: " + path_to_sims)
 
-    # Convert all svg to png using cairosvg \todo this is temporarily being done from std::system in C++
+    # Convert all svg to png using cairosvg
     svg_to_png.svg_to_png(path_to_output)
 
     # Create a set of directories containing any png results files

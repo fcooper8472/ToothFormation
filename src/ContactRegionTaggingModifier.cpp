@@ -52,6 +52,9 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
     auto p_cell_pop = static_cast<ImmersedBoundaryCellPopulation<DIM>*>(&rCellPopulation);
     auto p_mesh = static_cast<ImmersedBoundaryMesh<DIM, DIM>*>(&(rCellPopulation.rGetMesh()));
 
+    const double lateral_threshold = 0.72;
+    const double periapical_threshold = 0.0; // no periapical nodes
+
     /*
      * Annoyingly, we need a deep copy of the nodes for the private box collection because the neighbours are added
      * directly to the nodes, and we cannot overwrite the data used for mechanical interactions in the system.
@@ -230,15 +233,15 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         // If we didn't go too far, tag the nodes
         if (num_consecutive_misses != UNSIGNED_UNSET)
         {
-            const unsigned num_lateral = std::lround(0.70 * num_right_lat);
-            const unsigned num_pa = std::lround(0.8 * num_right_lat);
-            for (unsigned i = 0; i < num_right_lat; ++i)
+            const unsigned num_lateral = std::lround(lateral_threshold * num_right_lat);
+            const unsigned num_pa = std::lround(periapical_threshold * num_right_lat);
+            for (unsigned i = 0; i < num_lateral; ++i)
             {
                 const unsigned local_idx = (furthest_right_idx + 1 + i) % num_nodes_elem;
-                elem_it->GetNode(local_idx)->SetRegion(i <= num_lateral ? RIGHT_LATERAL_REGION : i <= num_pa ? RIGHT_PERIAPICAL_REGION : RIGHT_APICAL_REGION);
+                elem_it->GetNode(local_idx)->SetRegion(RIGHT_LATERAL_REGION);
             }
 
-            const unsigned right_apical_corner_idx = (furthest_right_idx + 1 + num_pa) % num_nodes_elem;
+            const unsigned right_apical_corner_idx = (furthest_right_idx + 1 + num_lateral) % num_nodes_elem;
             elem_it->rGetCornerNodes()[RIGHT_APICAL_CORNER] = elem_it->GetNode(right_apical_corner_idx);
         }
 
@@ -291,15 +294,15 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         // If we didn't go too far, tag the nodes
         if (num_consecutive_misses != UNSIGNED_UNSET)
         {
-            const unsigned num_lateral = std::lround(0.7 * num_left_lat);
-            const unsigned num_pa = std::lround(0.8 * num_right_lat);
-            for (unsigned i = 0; i < num_left_lat; ++i)
+            const unsigned num_lateral = std::lround(lateral_threshold * num_left_lat);
+            const unsigned num_pa = std::lround(periapical_threshold * num_right_lat);
+            for (unsigned i = 0; i < num_lateral; ++i)
             {
                 unsigned local_idx = (furthest_left_idx + num_nodes_elem - i - 1) % num_nodes_elem;
-                elem_it->GetNode(local_idx)->SetRegion(i <= num_lateral ? LEFT_LATERAL_REGION : i <= num_pa ? LEFT_PERIAPICAL_REGION : LEFT_APICAL_REGION);
+                elem_it->GetNode(local_idx)->SetRegion(LEFT_LATERAL_REGION);
             }
 
-            const unsigned left_apical_corner_idx = (furthest_left_idx + num_nodes_elem - 1 - num_pa) % num_nodes_elem;
+            const unsigned left_apical_corner_idx = (furthest_left_idx + num_nodes_elem - 1 - num_lateral) % num_nodes_elem;
             elem_it->rGetCornerNodes()[LEFT_APICAL_CORNER] = elem_it->GetNode(left_apical_corner_idx);
         }
         // If we did go too far, tag all non-basal nodes as left or right based on their orientation about the long axis

@@ -213,7 +213,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
         rElement.GetNode(node_idx)->AddAppliedForceContribution(aggregate_force);
     }
 
-    auto DistanceNodeToNode = [&](Node<DIM>* const a, Node<DIM>* const b) -> double
+    auto CoLinearDistanceNodeToNode = [&](Node<DIM>* const a, Node<DIM>* const b) -> double
     {
         const unsigned a_idx = a->GetIndex();
         const unsigned b_idx = b->GetIndex();
@@ -228,9 +228,9 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
     if (DIM == ELEMENT_DIM)
     {
         // Square root of 5 is the diagonal of a 2:1 ratio rectangle, and 1/15 is rough width of a cell
-        constexpr double width = 0.90 / 15.0;
-        constexpr double diagonal = width * 2.23606797749978969640;
-        constexpr double height = width * 1.92;
+//        constexpr double width = 0.90 / 15.0;
+//        constexpr double diagonal = width * 2.23606797749978969640;
+//        constexpr double height = width * 1.92;
 
         const auto &rCorners = rElement.rGetCornerNodes();
 
@@ -242,10 +242,22 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
             Node<DIM>* const p_lt_ba = rCorners[LEFT_BASAL_CORNER];
             Node<DIM>* const p_rt_ba = rCorners[RIGHT_BASAL_CORNER];
 
-            const double left_height = DistanceNodeToNode(p_lt_ba, p_lt_ap);
-            const double right_height = DistanceNodeToNode(p_rt_ba, p_rt_ap);
-            const double top_height = 0.9 * DistanceNodeToNode(p_rt_ap, p_lt_ap);
-            const double bot_height = 0.9 * DistanceNodeToNode(p_rt_ba, p_lt_ba);
+            const double left_len_colinear = CoLinearDistanceNodeToNode(p_lt_ba, p_lt_ap);
+            const double left_len_direct = r_mesh.GetDistanceBetweenNodes(p_lt_ba->GetIndex(), p_lt_ap->GetIndex());
+
+            const double right_len_colinear = CoLinearDistanceNodeToNode(p_rt_ba, p_rt_ap);
+            const double right_len_direct = r_mesh.GetDistanceBetweenNodes(p_rt_ba->GetIndex(), p_rt_ap->GetIndex());
+
+            const double top_len_colinear = CoLinearDistanceNodeToNode(p_rt_ap, p_lt_ap);
+            const double top_len_direct = r_mesh.GetDistanceBetweenNodes(p_rt_ap->GetIndex(), p_lt_ap->GetIndex());
+
+            const double bot_len_colinear = CoLinearDistanceNodeToNode(p_rt_ba, p_lt_ba);
+            const double bot_len_direct = r_mesh.GetDistanceBetweenNodes(p_rt_ba->GetIndex(), p_lt_ba->GetIndex());
+
+            const double left_height = left_len_colinear + 0.0 * (left_len_direct - left_len_colinear);
+            const double right_height = right_len_colinear + 0.0 * (right_len_direct - right_len_colinear);
+            const double top_height = top_len_colinear + 0.7 * (top_len_direct - top_len_colinear);
+            const double bot_height = bot_len_colinear + 0.7 * (bot_len_direct - bot_len_colinear);
 
 
 //            // Left and mid region

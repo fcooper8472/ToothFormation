@@ -46,12 +46,14 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "ExecutableSupport.hpp"
 #include "FluidSource.hpp"
+#include "ImmersedBoundaryEnumerations.hpp"
 #include "ImmersedBoundaryMesh.hpp"
 #include "ImmersedBoundaryMorseInteractionForce.hpp"
 #include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
 #include "NoCellCycleModel.hpp"
 #include "OffLatticeSimulation.hpp"
+#include "SimpleTargetAreaModifier.hpp"
 #include "ThreeRegionShearForce.hpp"
 #include "ThreeRegionSvgWriter.hpp"
 #include "ThreeRegionInteractionForces.hpp"
@@ -177,8 +179,9 @@ void SetupAndRunSimulation()
      * 7: Include apical lamina
      * 8: Use a leaky lamina
      * 9: Num fluid mesh points: overrides nodes per cell
+     * 10: Absolute gap between cells
      */
-    ImmersedBoundaryPalisadeMeshGenerator gen(15u, 128u, 0.05, 2.0, 0.0, true, apical_lamina, false, 192u);
+    ImmersedBoundaryPalisadeMeshGenerator gen(15u, 128u, 0.05, 2.0, 0.0, true, apical_lamina, false, 192u, interaction_dist * tra_rest_length);
     ImmersedBoundaryMesh<2, 2>* p_mesh = gen.GetMesh();
 
     std::array<unsigned, 3> region_sizes = {{6u, 3u, 6u}};
@@ -190,7 +193,7 @@ void SetupAndRunSimulation()
     cells_generator.GenerateBasicRandom(cells, p_mesh->GetNumElements());
 
     ImmersedBoundaryCellPopulation<2> cell_population(*p_mesh, cells);
-    cell_population.SetIfPopulationHasActiveSources(false);
+    cell_population.SetIfPopulationHasActiveSources(true);
     cell_population.SetInteractionDistance(interaction_dist);
     cell_population.SetReMeshFrequency(remesh_freq);
     cell_population.SetOutputNodeRegionToVtk(true);
@@ -221,6 +224,11 @@ void SetupAndRunSimulation()
         simulator.AddSimulationModifier(boost::make_shared<ContactRegionTaggingModifier<2>>());
     }
 
+    auto p_area_modifier = boost::make_shared<SimpleTargetAreaModifier<2>>();
+    simulator.AddSimulationModifier(p_area_modifier);
+    p_area_modifier->SetReferenceTargetArea(p_mesh->GetVolumeOfElement(4));
+    p_area_modifier->SetGrowthDuration(0.0);
+
     // Add force laws
     auto p_boundary_force = boost::make_shared<VarAdhesionMorseMembraneForce<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_boundary_force);
@@ -248,8 +256,10 @@ void SetupAndRunSimulation()
     output_directory << "tooth_formation/Exe_BendingThreeRegion/sim/" << id_string;
     simulator.SetOutputDirectory(output_directory.str());
 
-    // Calculate sampling multiple to have at least 5 frames per second on a 8 second video
-    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (5.0 * 15.0))));
+    // Calculate sampling multiple to have at least 5 frames per second on a 15 second video
+    const double num_secs = 15.0;
+    const double num_fps = 5.0;
+    unsigned sampling_multiple = std::max(1u, static_cast<unsigned>(std::floor(num_time_steps / (num_secs * num_fps))));
 
     // Set simulation properties
     double dt = 0.01;
@@ -289,19 +299,34 @@ void SetupAndRunSimulation()
     std::vector<double> leans;
     for (unsigned elem_idx = 0; elem_idx < p_mesh->GetNumElements(); ++elem_idx)
     {
+        // Pointer to element
+        auto p_elem = p_mesh->GetElement(elem_idx);
+
+        // Pointers to corner nodes
+        auto p_lt_basal = p_elem->rGetCornerNodes()[LEFT_BASAL_CORNER];
+        auto p_lt_apical = p_elem->rGetCornerNodes()[LEFT_APICAL_CORNER];
+        auto p_rt_basal = p_elem->rGetCornerNodes()[RIGHT_BASAL_CORNER];
+        auto p_rt_apical = p_elem->rGetCornerNodes()[RIGHT_APICAL_CORNER];
+
         if (elem_idx < region_sizes[0])
         {
-            // Get and orient the short axis
-            auto short_axis = p_mesh->GetShortAxisOfElement(elem_idx);
-            short_axis = short_axis[0] < 0.0 ? short_axis : -short_axis;
-            leans.push_back(atan(short_axis[1] / fabs(short_axis[0])));
+            // Get average orientation of lateral domains; angle of lean towards centre
+            auto lt_vec = p_mesh->GetVectorFromAtoB(p_lt_basal->rGetLocation(), p_lt_apical->rGetLocation());
+            auto rt_vec = p_mesh->GetVectorFromAtoB(p_rt_basal->rGetLocation(), p_rt_apical->rGetLocation());
+
+            // Add leans for left and right, in towards the centre
+            leans.emplace_back(std::atan(lt_vec[0] / lt_vec[1]));
+            leans.emplace_back(std::atan(rt_vec[0] / rt_vec[1]));
         }
         else if (elem_idx >= region_sizes[0] + region_sizes[1])
         {
-            // Get and orient the short axis
-            auto short_axis = p_mesh->GetShortAxisOfElement(elem_idx);
-            short_axis = short_axis[0] > 0.0 ? short_axis : -short_axis;
-            leans.push_back(atan(short_axis[1] / short_axis[0]));
+            // Get average orientation of lateral domains; angle of lean towards centre
+            auto lt_vec = p_mesh->GetVectorFromAtoB(p_lt_basal->rGetLocation(), p_lt_apical->rGetLocation());
+            auto rt_vec = p_mesh->GetVectorFromAtoB(p_rt_basal->rGetLocation(), p_rt_apical->rGetLocation());
+
+            // Add leans for left and right, in towards the centre (note minus x component)
+            leans.emplace_back(std::atan(-lt_vec[0] / lt_vec[1]));
+            leans.emplace_back(std::atan(-rt_vec[0] / rt_vec[1]));
         }
     }
 
@@ -324,11 +349,34 @@ void SetupAndRunSimulation()
     const double skew_mean = std::accumulate(abs_skews.begin(), abs_skews.end(), 0.0) / abs_skews.size();
     const double skew_var = std::inner_product(abs_skews.begin(), abs_skews.end(), abs_skews.begin(), 0.0) / abs_skews.size() - skew_mean * skew_mean;
 
+    // Lamina angle is angle of triangle with base 0.5 and height of max y variation
+    const double lamina_angle = std::atan((*minmax_y_vals.second - *minmax_y_vals.first) / 0.5);
+    const double lean_ratio = lean_mean / lamina_angle;
+
     PRINT_VECTOR(leans);
     PRINT_VARIABLE(vol_end / vol_start);
 
     OutputFileHandler results_handler(output_directory.str(), false);
     out_stream results_file = results_handler.OpenOutputFile("results.csv");
+
+    // Generate mp4 from svg sequence, assuming ffmpeg has been built with librsvg enabled
+    {
+        const std::string svg_dir = results_handler.GetOutputDirectoryFullPath() + "results_from_time_0/";
+        const std::string number = std::stoi(id_string) < 10 ? '0' + id_string : id_string;
+        const std::string mp4_name = svg_dir + number + ".mp4";
+        const std::string command =
+                "ffmpeg -v 0 -r " +
+                std::to_string(static_cast<unsigned>(num_fps)) +
+                " -pattern_type glob -i \"" +
+                svg_dir +
+                "*.svg\" -c:v libx264 -pix_fmt yuv420p -crf 0 -preset slow -y " +
+                mp4_name +
+                "> /dev/null";
+
+        std::cout << "C++: Generating mp4" << std::endl;
+        std::system(command.c_str());
+        std::cout << "C++: Finished generating mp4"<< std::endl;
+    }
 
     // Output summary statistics to results file
     (*results_file) << "id,"
@@ -336,7 +384,8 @@ void SetupAndRunSimulation()
                     << "skew_mean,"
                     << "skew_std,"
                     << "lean_mean,"
-                    << "lean_std"
+                    << "lean_std,"
+                    << "lean_ratio"
                     << std::endl;
 
 
@@ -345,7 +394,10 @@ void SetupAndRunSimulation()
                     << std::to_string(skew_mean) << ","
                     << std::to_string(std::sqrt(skew_var)) << ","
                     << std::to_string(lean_mean) << ","
-                    << std::to_string(std::sqrt(lean_var));
+                    << std::to_string(std::sqrt(lean_var)) << ","
+                    << std::to_string(lean_ratio);
     // Tidy up
     results_file->close();
+
+
 }

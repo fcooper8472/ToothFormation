@@ -61,7 +61,7 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
      * It is assumed that there are (at least initially) 3n+1 cells.
      */
 
-    const double mRepulsionWellDepth = 0.5 * 1e8;
+    const double mRepulsionWellDepth = mBasicInteractionStrength;
 
     // This will be triggered only once - during simulation set up
     if (mpMesh == NULL)
@@ -231,7 +231,7 @@ double ThreeRegionInteractionForces<DIM>::CalculateElementTypeMult(Node<DIM>* pN
         // If either of the nodes is lamina region, just set the relevant type multiplier and stop
         if (elem_type == THREE_REGION_LAMINA)
         {
-            type_mult = 2.0;
+            type_mult = 1.0;
             break;
         }
     }
