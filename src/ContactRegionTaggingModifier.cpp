@@ -54,6 +54,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
 
     const double lateral_threshold = 0.72;
     const double periapical_threshold = 0.0; // no periapical nodes
+    const double contact_dist = 2.0 * (p_cell_pop->GetInteractionDistance() * 0.25); // multiple of the rest length
 
     /*
      * Annoyingly, we need a deep copy of the nodes for the private box collection because the neighbours are added
@@ -90,7 +91,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
 
         const c_vector<double, DIM> centroid = p_mesh->GetCentroidOfElement(elem_it->GetIndex());
         const unsigned num_nodes_elem = elem_it->GetNumNodes();
-        const unsigned max_basal_nodes = std::lround(num_nodes_elem / 6.0);
+        const unsigned max_basal_nodes = std::lround(num_nodes_elem / 3.0);
 
         // Orient short axis to point in the positive x direction
         c_vector<double, DIM> short_axis = p_mesh->GetShortAxisOfElement(elem_it->GetIndex());
@@ -151,9 +152,9 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
                 {
                     Node<DIM> *const p_other_node = p_mesh->GetNode(global_idx);
 
-                    // If the other node is in a lamina, and within the threshold distance, mark our node as basal
+                    // If the other node is in a lamina, and within the contact distance, mark our node as basal
                     if (p_other_node->GetRegion() == LAMINA_REGION &&
-                        p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < p_cell_pop->GetInteractionDistance())
+                        p_mesh->GetDistanceBetweenNodes(p_this_node->GetIndex(), p_other_node->GetIndex()) < contact_dist)
                     {
                         p_this_node->SetRegion(node_on_left ? LEFT_BASAL_REGION : RIGHT_BASAL_REGION);
                         actual_basal_indices.emplace_back(node_idx);
