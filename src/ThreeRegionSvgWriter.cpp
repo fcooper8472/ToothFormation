@@ -113,6 +113,8 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
             }
         }
 
+        AddRulerToSvgFile(svg_file);
+
         (*svg_file) << "<text x=\"" << 0.05 * mSvgSize << "\" y=\"" << (0.45 + 9.0 / 32.0) * mSvgSize << "\" "
                     << "font-size=\"30px\" font-family=\"monospace\">"
                     << "ts=" << SimulationTime::Instance()->GetTimeStepsElapsed()
@@ -125,6 +127,22 @@ void ThreeRegionSvgWriter<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM
         svg_file->close();
     }
 }
+
+
+template <unsigned DIM>
+void ThreeRegionSvgWriter<DIM>::AddRulerToSvgFile(out_stream& rSvgFile) const noexcept
+{
+    for (unsigned i = 0; i < 101; ++i)
+    {
+        const double rad = i % 10 == 0 ? 0.002 * mSvgSize : 0.001 * mSvgSize;
+
+        (*rSvgFile) << "<circle class=\"node_9\" "
+                    << "cx=\"" << 0.01 * i * mSvgSize << "\" "
+                    << "cy=\"" << 0.23 * mSvgSize << "\" "
+                    << "r=\"" << rad << "\"/>" << "\n";
+    }
+}
+
 
 template <unsigned DIM>
 void ThreeRegionSvgWriter<DIM>::SetupSolve(AbstractCellPopulation<DIM, DIM>& rCellPopulation, std::string outputDirectory)

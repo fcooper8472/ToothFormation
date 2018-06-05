@@ -148,6 +148,15 @@ public:
                            double elongation, int angle) const noexcept;
 
     /**
+     * Helper method for UpdateAtEndOfTimeStep().
+     *
+     * Add a ruler to the top of the SVG showing 0.01 increments.
+     *
+     * @param rSvgFile the svg file stream to add to
+     */
+    void AddRulerToSvgFile(out_stream& rSvgFile) const noexcept;
+
+    /**
      * Overridden OutputSimulationModifierParameters() method.
      * Output any simulation modifier parameters to file.
      *
