@@ -51,6 +51,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ImmersedBoundaryMorseInteractionForce.hpp"
 #include "ImmersedBoundaryPalisadeMeshGenerator.hpp"
 #include "ImmersedBoundarySimulationModifier.hpp"
+#include "MathsCustomFunctions.hpp"
 #include "NoCellCycleModel.hpp"
 #include "OffLatticeSimulation.hpp"
 #include "SimpleTargetAreaModifier.hpp"
@@ -308,23 +309,38 @@ void SetupAndRunSimulation()
         auto p_rt_basal = p_elem->rGetCornerNodes()[RIGHT_BASAL_CORNER];
         auto p_rt_apical = p_elem->rGetCornerNodes()[RIGHT_APICAL_CORNER];
 
+        if (p_lt_basal == nullptr || p_lt_apical == nullptr || p_rt_basal == nullptr || p_rt_apical == nullptr)
+        {
+            continue;
+        }
+
+        unsigned lb_idx = p_elem->GetNodeLocalIndex(p_lt_basal->GetIndex());
+        unsigned la_idx = p_elem->GetNodeLocalIndex(p_lt_apical->GetIndex());
+        unsigned rb_idx = p_elem->GetNodeLocalIndex(p_rt_basal->GetIndex());
+        unsigned ra_idx = p_elem->GetNodeLocalIndex(p_rt_apical->GetIndex());
+
+        unsigned lt_third = SmallDifferenceMod(lb_idx, la_idx, p_elem->GetNumNodes()) / 3;
+        unsigned rt_third = SmallDifferenceMod(rb_idx, ra_idx, p_elem->GetNumNodes()) / 3;
+
+        // Middle third, anticlockwise from left apical corner
+        auto lt_vec = p_mesh->GetVectorFromAtoB(
+                p_elem->GetNode(AdvanceMod(la_idx, lt_third + lt_third, p_elem->GetNumNodes()))->rGetLocation(),
+                p_elem->GetNode(AdvanceMod(la_idx, lt_third, p_elem->GetNumNodes()))->rGetLocation()
+        );
+
+        // Middle third, clockwise from right apical corner
+        auto rt_vec = p_mesh->GetVectorFromAtoB(
+                p_elem->GetNode(AdvanceMod(ra_idx, -rt_third - rt_third, p_elem->GetNumNodes()))->rGetLocation(),
+                p_elem->GetNode(AdvanceMod(ra_idx, -rt_third, p_elem->GetNumNodes()))->rGetLocation()
+        );
+
         if (elem_idx < region_sizes[0])
         {
-            // Get average orientation of lateral domains; angle of lean towards centre
-            auto lt_vec = p_mesh->GetVectorFromAtoB(p_lt_basal->rGetLocation(), p_lt_apical->rGetLocation());
-            auto rt_vec = p_mesh->GetVectorFromAtoB(p_rt_basal->rGetLocation(), p_rt_apical->rGetLocation());
-
-            // Add leans for left and right, in towards the centre
             leans.emplace_back(std::atan(lt_vec[0] / lt_vec[1]));
             leans.emplace_back(std::atan(rt_vec[0] / rt_vec[1]));
         }
         else if (elem_idx >= region_sizes[0] + region_sizes[1])
         {
-            // Get average orientation of lateral domains; angle of lean towards centre
-            auto lt_vec = p_mesh->GetVectorFromAtoB(p_lt_basal->rGetLocation(), p_lt_apical->rGetLocation());
-            auto rt_vec = p_mesh->GetVectorFromAtoB(p_rt_basal->rGetLocation(), p_rt_apical->rGetLocation());
-
-            // Add leans for left and right, in towards the centre (note minus x component)
             leans.emplace_back(std::atan(-lt_vec[0] / lt_vec[1]));
             leans.emplace_back(std::atan(-rt_vec[0] / rt_vec[1]));
         }
