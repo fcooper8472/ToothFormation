@@ -331,6 +331,68 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
                 p_this_node->SetRegion(node_on_left ? LEFT_LATERAL_REGION : RIGHT_LATERAL_REGION);
             }
         }
+
+        // Identify and tag the 'beak corner'.  First, resize corners vec if necessary
+        while (elem_it->rGetCornerNodes().size() < 5)
+        {
+            elem_it->rGetCornerNodes().emplace_back(nullptr);
+        }
+
+
+        if (elem_it->GetIndex() < 6u) // left region
+        {
+            // Get a list of right apical nodes
+            std::vector<unsigned> ra_node_ids;
+            Node<DIM>* const corner_node = elem_it->rGetCornerNodes()[RIGHT_APICAL_CORNER];
+            ra_node_ids.emplace_back(elem_it->GetNodeLocalIndex(corner_node->GetIndex()));
+
+            while (elem_it->GetNode(ra_node_ids.back())->GetRegion() == RIGHT_APICAL_REGION)
+            {
+                ra_node_ids.emplace_back(AdvanceMod(ra_node_ids.back(), 1, elem_it->GetNumNodes()));  // anticlockwise
+            }
+
+            std::vector<double> inner_prods;
+            for (unsigned idx = 0; idx < ra_node_ids.size() - 1; ++idx)
+            {
+                Node<DIM>* const p_this_node = elem_it->GetNode(ra_node_ids[idx]);
+                Node<DIM>* const p_next_node = elem_it->GetNode(ra_node_ids[idx + 1]);
+
+                inner_prods.emplace_back(std::fabs(inner_prod(
+                        p_mesh->GetVectorFromAtoB(p_this_node->rGetLocation(), p_next_node->rGetLocation()),
+                        short_axis)
+                ));
+            }
+
+            unsigned idx = std::distance(inner_prods.begin(), std::min_element(inner_prods.begin(), inner_prods.end()));
+            elem_it->rGetCornerNodes()[4] = elem_it->GetNode(ra_node_ids[idx]);
+        }
+        else if (elem_it->GetIndex() > 8u) // right region
+        {
+            // Get a list of right apical nodes
+            std::vector<unsigned> la_node_ids;
+            Node<DIM>* const corner_node = elem_it->rGetCornerNodes()[LEFT_APICAL_CORNER];
+            la_node_ids.emplace_back(elem_it->GetNodeLocalIndex(corner_node->GetIndex()));
+
+            while (elem_it->GetNode(la_node_ids.back())->GetRegion() == LEFT_APICAL_CORNER)
+            {
+                la_node_ids.emplace_back(AdvanceMod(la_node_ids.back(), -1, elem_it->GetNumNodes()));  // clockwise
+            }
+
+            std::vector<double> inner_prods;
+            for (unsigned idx = 0; idx < la_node_ids.size() - 1; ++idx)
+            {
+                Node<DIM>* const p_this_node = elem_it->GetNode(la_node_ids[idx]);
+                Node<DIM>* const p_next_node = elem_it->GetNode(la_node_ids[idx + 1]);
+
+                inner_prods.emplace_back(std::fabs(inner_prod(
+                        p_mesh->GetVectorFromAtoB(p_this_node->rGetLocation(), p_next_node->rGetLocation()),
+                        short_axis)
+                ));
+            }
+
+            unsigned idx = std::distance(inner_prods.begin(), std::min_element(inner_prods.begin(), inner_prods.end()));
+            elem_it->rGetCornerNodes()[4] = elem_it->GetNode(la_node_ids[idx]);
+        }
     }
 
     // Tidy up out copied nodes
