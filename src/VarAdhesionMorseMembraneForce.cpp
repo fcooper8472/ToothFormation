@@ -234,13 +234,14 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
 
         const auto &rCorners = rElement.rGetCornerNodes();
 
-        if (std::none_of(rCorners.begin(), rCorners.end(), [](Node<DIM> *a) { return a == nullptr; }))
+        if (std::none_of(rCorners.begin(), rCorners.begin() + 4, [](Node<DIM> *a) { return a == nullptr; }))
         {
 
             Node<DIM>* const p_lt_ap = rCorners[LEFT_APICAL_CORNER];
             Node<DIM>* const p_rt_ap = rCorners[RIGHT_APICAL_CORNER];
             Node<DIM>* const p_lt_ba = rCorners[LEFT_BASAL_CORNER];
             Node<DIM>* const p_rt_ba = rCorners[RIGHT_BASAL_CORNER];
+            Node<DIM>* const p_beak = rCorners[4];
 
             const double left_len_colinear = CoLinearDistanceNodeToNode(p_lt_ba, p_lt_ap);
             const double left_len_direct = r_mesh.GetDistanceBetweenNodes(p_lt_ba->GetIndex(), p_lt_ap->GetIndex());
@@ -256,35 +257,26 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
 
             const double left_height = left_len_colinear + 0.0 * (left_len_direct - left_len_colinear);
             const double right_height = right_len_colinear + 0.0 * (right_len_direct - right_len_colinear);
-            const double top_height = top_len_colinear + 0.7 * (top_len_direct - top_len_colinear);
-            const double bot_height = bot_len_colinear + 0.7 * (bot_len_direct - bot_len_colinear);
+//            const double top_height = top_len_colinear + 1.1 * (top_len_direct - top_len_colinear);
+            const double bot_height = bot_len_colinear + 0.5 * (bot_len_direct - bot_len_colinear);
 
 
-//            // Left and mid region
-//            if (elem_region == 0u || elem_region == 1u)
-//            {
-//                const double this_diagonal = elem_region == 1u ? diagonal : 1.0 * diagonal;
-//                const double this_factor = factor == 1u ? factor : 1.0 * factor;
-//
-//                auto diag_vec = r_mesh.GetVectorFromAtoB(p_lt_ba->rGetLocation(), p_rt_ap->rGetLocation());
-//                const double length = norm_2(diag_vec);
-//                const auto diag_force = this_factor * (length - this_diagonal) * mElementWellDepth * diag_vec / length;
-//                p_rt_ap->AddAppliedForceContribution(-diag_force);
-//                p_lt_ba->AddAppliedForceContribution(diag_force);
-//            }
-//
-//            // Mid and right region
-//            if (elem_region == 1u || elem_region == 2u)
-//            {
-//                const double this_diagonal = elem_region == 1u ? diagonal : 1.0 * diagonal;
-//                const double this_factor = factor == 1u ? factor : 1.0 * factor;
-//
-//                auto diag_vec = r_mesh.GetVectorFromAtoB(p_rt_ba->rGetLocation(), p_lt_ap->rGetLocation());
-//                const double length = norm_2(diag_vec);
-//                const auto diag_force = this_factor * (length - this_diagonal) * mElementWellDepth * diag_vec / length;
-//                p_lt_ap->AddAppliedForceContribution(-diag_force);
-//                p_rt_ba->AddAppliedForceContribution(diag_force);
-//            }
+
+            if (p_beak != nullptr)
+            {
+                Node<DIM>* const p_basal = elem_region == 0u ? p_lt_ba : p_rt_ba;
+                Node<DIM>* const p_apical = elem_region == 0u ? p_rt_ap : p_lt_ap;
+
+                const double rest_length = r_mesh.GetDistanceBetweenNodes(p_basal->GetIndex(), p_apical->GetIndex());
+
+                const c_vector<double, DIM> diag_vec = r_mesh.GetVectorFromAtoB(p_basal->rGetLocation(),
+                                                                                p_beak->rGetLocation());
+                const double vec_len = norm_2(diag_vec);
+                const c_vector<double, DIM> force = (mSupportStrength * mDiagonalFraction * (vec_len - rest_length) * well_depth / vec_len) * diag_vec;
+
+                p_beak->AddAppliedForceContribution(-force);
+                p_basal->AddAppliedForceContribution(force);
+            }
 
             { // left
                 const c_vector<double, DIM> left_vec = r_mesh.GetVectorFromAtoB(p_lt_ba->rGetLocation(), p_lt_ap->rGetLocation());
@@ -480,6 +472,18 @@ template<unsigned int DIM>
 void VarAdhesionMorseMembraneForce<DIM>::SetSupportStrength(double supportStrength)
 {
     mSupportStrength = supportStrength;
+}
+
+template<unsigned int DIM>
+double VarAdhesionMorseMembraneForce<DIM>::GetDiagonalFraction() const
+{
+    return mDiagonalFraction;
+}
+
+template<unsigned int DIM>
+void VarAdhesionMorseMembraneForce<DIM>::SetDiagonalFraction(double diagonalFraction)
+{
+    mDiagonalFraction = diagonalFraction;
 }
 
 template<unsigned int DIM>

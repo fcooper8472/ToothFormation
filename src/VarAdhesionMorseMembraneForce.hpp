@@ -98,6 +98,9 @@ private:
     /** Strength of the springs used to support the cell's shape */
     double mSupportStrength;
 
+    /** Strength of the diagonal spring as a proportion of the support strength */
+    double mDiagonalFraction;
+
     /** Frequency of oscillation for cyclic stiffness calculation */
     double mCyclicFrequency;
 
@@ -209,6 +212,12 @@ public:
 
     /** @param supportStrength the new value of mSupportStrength */
     void SetSupportStrength(double supportStrength);
+
+    /** @return mDiagonalFraction */
+    double GetDiagonalFraction() const;
+
+    /** @param diagonalFraction the new value of mDiagonalFraction */
+    void SetDiagonalFraction(double diagonalFraction);
 
     /** @return mCyclicFrequency */
     double GetCyclicFrequency() const;
