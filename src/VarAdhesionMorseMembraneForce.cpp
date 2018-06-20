@@ -258,7 +258,18 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
             const double left_height = left_len_colinear + 0.0 * (left_len_direct - left_len_colinear);
             const double right_height = right_len_colinear + 0.0 * (right_len_direct - right_len_colinear);
 //            const double top_height = top_len_colinear + 1.1 * (top_len_direct - top_len_colinear);
-            const double bot_height = bot_len_colinear + 0.5 * (bot_len_direct - bot_len_colinear);
+
+            // Calculate the average width of a cell \todo: don't hardcode this value
+            // Domain divided into 15 cells, minus the gap that cells are kept apart
+            const double average_width = (1.0 / 15.0) - 0.25 * rCellPopulation.GetInteractionDistance();
+            const double basal_y_diff = std::fabs(p_lt_ba->rGetLocation()[1] - p_rt_ba->rGetLocation()[1]);
+
+            // Bottom size is bounded above by the following hypotenuse
+            const double bot_height = std::min(
+                    bot_len_colinear + 0.0 * (bot_len_direct - bot_len_colinear),
+                    std::sqrt(average_width * average_width + basal_y_diff * basal_y_diff));
+
+            const double top_height = std::min(bot_height, average_width);
 
 
 
@@ -299,7 +310,7 @@ void VarAdhesionMorseMembraneForce<DIM>::CalculateForcesOnElement(ImmersedBounda
             { // top
                 const c_vector<double, DIM> top_vec = r_mesh.GetVectorFromAtoB(p_rt_ap->rGetLocation(), p_lt_ap->rGetLocation());
                 const double len_3 = norm_2(top_vec);
-                const c_vector<double, DIM> force_3 = (mSupportStrength * (len_3 - bot_height) * well_depth / len_3) * top_vec;
+                const c_vector<double, DIM> force_3 = (mSupportStrength * (len_3 - top_height) * well_depth / len_3) * top_vec;
 
                 p_lt_ap->AddAppliedForceContribution(-force_3);
                 p_rt_ap->AddAppliedForceContribution(force_3);
