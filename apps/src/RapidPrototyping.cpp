@@ -247,6 +247,8 @@ void SetupAndRunSimulation()
     p_boundary_force->SetCyclicFrequency(cyclic_frequency);
     p_boundary_force->SetGradientOnProportion(grad_on_prop);
 
+    PRINT_VARIABLE(diagonal_fraction);
+
     auto p_cell_cell_force = boost::make_shared<ThreeRegionInteractionForces<2>>();
     p_main_modifier->AddImmersedBoundaryForce(p_cell_cell_force);
     p_cell_cell_force->SetBasicInteractionStrength(tra_spring_const);

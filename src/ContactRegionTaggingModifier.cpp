@@ -54,7 +54,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
 
     const double lateral_threshold = 0.72;
     const double periapical_threshold = 0.0; // no periapical nodes
-    const double contact_dist = 2.0 * (p_cell_pop->GetInteractionDistance() * 0.25); // multiple of the rest length
+    const double contact_dist = 3.0 * (p_cell_pop->GetInteractionDistance() * 0.25); // multiple of the rest length
 
     /*
      * Annoyingly, we need a deep copy of the nodes for the private box collection because the neighbours are added
@@ -344,7 +344,9 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             // Get a list of right apical nodes
             std::vector<unsigned> ra_node_ids;
             Node<DIM>* const corner_node = elem_it->rGetCornerNodes()[RIGHT_APICAL_CORNER];
-            ra_node_ids.emplace_back(elem_it->GetNodeLocalIndex(corner_node->GetIndex()));
+            ra_node_ids.emplace_back(
+                    AdvanceMod(elem_it->GetNodeLocalIndex(corner_node->GetIndex()), 3, elem_it->GetNumNodes())
+            );
 
             while (elem_it->GetNode(ra_node_ids.back())->GetRegion() == RIGHT_APICAL_REGION)
             {
@@ -364,14 +366,17 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             }
 
             unsigned idx = std::distance(inner_prods.begin(), std::min_element(inner_prods.begin(), inner_prods.end()));
-            elem_it->rGetCornerNodes()[4] = elem_it->GetNode(ra_node_ids[idx]);
+            unsigned adjusted_idx = idx;//(2 * idx) / 3;
+            elem_it->rGetCornerNodes()[4] = elem_it->GetNode(ra_node_ids[adjusted_idx]);
         }
         else if (elem_it->GetIndex() > 8u) // right region
         {
             // Get a list of right apical nodes
             std::vector<unsigned> la_node_ids;
             Node<DIM>* const corner_node = elem_it->rGetCornerNodes()[LEFT_APICAL_CORNER];
-            la_node_ids.emplace_back(elem_it->GetNodeLocalIndex(corner_node->GetIndex()));
+            la_node_ids.emplace_back(
+                    AdvanceMod(elem_it->GetNodeLocalIndex(corner_node->GetIndex()), -3, elem_it->GetNumNodes())
+            );
 
             while (elem_it->GetNode(la_node_ids.back())->GetRegion() == LEFT_APICAL_CORNER)
             {
@@ -391,7 +396,8 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             }
 
             unsigned idx = std::distance(inner_prods.begin(), std::min_element(inner_prods.begin(), inner_prods.end()));
-            elem_it->rGetCornerNodes()[4] = elem_it->GetNode(la_node_ids[idx]);
+            unsigned adjusted_idx = idx; // (2 * idx) / 3;
+            elem_it->rGetCornerNodes()[4] = elem_it->GetNode(la_node_ids[adjusted_idx]);
         }
     }
 

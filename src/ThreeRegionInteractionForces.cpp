@@ -146,6 +146,12 @@ void ThreeRegionInteractionForces<DIM>::AddImmersedBoundaryForceContribution(std
                 if (normed_dist < eff_rest_length)
                 {
                     eff_well_depth *= mRepulsionWellDepth;
+
+                    // Turn down the repulsion strength if it's a lamina interaction
+                    if (p_node_a->GetRegion() == LAMINA_REGION || p_node_a->GetRegion() == LAMINA_REGION)
+                    {
+                        eff_well_depth *= 0.2;
+                    }
                 }
                 else
                 {
