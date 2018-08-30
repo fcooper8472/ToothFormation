@@ -380,6 +380,8 @@ void SetupAndRunSimulation()
     OutputFileHandler results_handler(output_directory.str(), false);
     out_stream results_file = results_handler.OpenOutputFile("results.csv");
 
+    const double buckling_stat = 0.5 * (p_mesh->GetElongationShapeFactorOfElement(6u) + p_mesh->GetElongationShapeFactorOfElement(8u));
+
     // Generate mp4 from svg sequence, assuming ffmpeg has been built with librsvg enabled
     {
         const std::string svg_dir = results_handler.GetOutputDirectoryFullPath() + "results_from_time_0/";
@@ -406,7 +408,8 @@ void SetupAndRunSimulation()
                     << "skew_std,"
                     << "lean_mean,"
                     << "lean_std,"
-                    << "lean_ratio"
+                    << "lean_ratio,"
+                    << "bucking_esf"
                     << std::endl;
 
 
@@ -416,7 +419,8 @@ void SetupAndRunSimulation()
                     << std::to_string(std::sqrt(skew_var)) << ","
                     << std::to_string(lean_mean) << ","
                     << std::to_string(std::sqrt(lean_var)) << ","
-                    << std::to_string(lean_ratio);
+                    << std::to_string(lean_ratio) << ","
+                    << std::to_string(buckling_stat);
     // Tidy up
     results_file->close();
 
