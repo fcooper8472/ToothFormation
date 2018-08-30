@@ -42,41 +42,52 @@ if not(os.path.isfile(executable)):
 # Time string when script is run, used for creating a unique archive name
 today = time.strftime('%Y-%m-%dT%H%M')
 
+ref_csc = 2.5 * 1e8
+ref_tsc = 0.8 * 1e7
+ref_di = 0.025
+ref_sm = 1.0
+ref_aam = 1.0
+ref_ns = 1.0 * 1e4
+ref_cyf = -3.0
+ref_gop = 1.0
+
+ref_sup = 0.006
+ref_df = 0.5
 
 # List of command line arguments for the executable, with value ranges and descriptive names
 command_line_args = {
     # 'CRL': {'name': 'cor_rest_length',
     #         'vals': [0.25]},
     'CSC': {'name': 'cor_spring_const',
-            'vals': np.linspace(2.5 * 1e8, 0.8 * 1e8, num=1)},
+            'vals': np.linspace(1.0 * ref_csc, 1.0 * ref_csc, num=1)},
     'SUP': {'name': 'support_strenght',
-            'vals': np.linspace(0.006, 0.015, num=1)},
+            'vals': np.linspace(ref_sup, ref_sup, num=1)},
     'DF': {'name': 'diagonal_fraction',
-           'vals': np.linspace(0.5, 0.1, num=1)},
+           'vals': np.linspace(0.0 * ref_df, ref_df, num=6)},
     # 'TRL': {'name': 'tra_rest_length',
     #         'vals': [0.25]},
     'TSC': {'name': 'tra_spring_const',
-            'vals': np.linspace(0.8 * 1e7, 1.4 * 1e7, num=1)},
+            'vals': np.linspace(1.0 * ref_tsc, 1.0 * ref_tsc, num=1)},
     # 'KFS': {'name': 'kinematic_strength',
     #         'vals': np.linspace(1.0, 3.0, num=1)},
     # 'ALM': {'name': 'apical_lam_mult',
     #         'vals': np.linspace(0.1, 0.2, num=1)},
     'DI': {'name': 'interaction_dist',
-           'vals': [0.025]},
+           'vals': [ref_di]},
     'SM': {'name': 'inner_corner_stiffness_mult',
-           'vals': np.linspace(0.02, 0.02, num=1)},
+           'vals': np.linspace(0.02 * ref_sm, ref_sm, num=1)},
     'AAM': {'name': 'ap-ap_mult',
-            'vals': np.linspace(3.0, 1.0, num=1)},
-    'NS': {'name': 'normal_std',
-           'vals': [1.0 * 1e4]},
+            'vals': np.linspace(3.0 * ref_aam, ref_aam, num=1)},
+    'NS': {'name': 'normal_str',
+           'vals': [ref_ns]},
     'CYF': {'name': 'cyclic_freq',
             'vals': np.logspace(-3.0, -5.0, num=1, base=2.0)},
     'GOP': {'name': 'grad_on_prop',
-            'vals': np.linspace(0.8, 0.5, num=1)},
+            'vals': np.linspace(0.8 * ref_gop, 0.5 * ref_gop, num=1)},
     'RM': {'name': 'remesh_frequency',
            'vals': [50]},
     'TS': {'name': 'num_time_steps',
-           'vals': [3000]*1},
+           'vals': [3000]*5},
     # 'AL': {'name': 'apical_lamina',
     #        'vals': [False]*1},
 }
