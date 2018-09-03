@@ -30,7 +30,7 @@ except ImportError as e:
 chaste_build_dir = os.environ.get('CHASTE_BUILD_DIR')
 chaste_test_dir = os.environ.get('CHASTE_TEST_OUTPUT')
 
-executable = os.path.join(chaste_build_dir, 'projects/ToothFormation/apps', 'RapidPrototyping')
+executable = os.path.join(chaste_build_dir, 'projects/ToothFormation/apps', 'CyclicAnalysis')
 path_to_output = os.path.join(chaste_test_dir, 'tooth_formation', 'Exe_BendingThreeRegion')
 path_to_sims = os.path.join(path_to_output, 'sim')
 path_to_movies = os.path.join(path_to_output, 'movies')
@@ -87,7 +87,7 @@ command_line_args = {
     'RM': {'name': 'remesh_frequency',
            'vals': [50]},
     'TS': {'name': 'num_time_steps',
-           'vals': [3000]*1},
+           'vals': [10000]*1},
     # 'AL': {'name': 'apical_lamina',
     #        'vals': [False]*1},
 }

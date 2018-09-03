@@ -56,6 +56,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "NoCellCycleModel.hpp"
 #include "OffLatticeSimulation.hpp"
 #include "SimpleTargetAreaModifier.hpp"
+#include "SimulationStoppingModifier.hpp"
 #include "ThreeRegionShearForce.hpp"
 #include "ThreeRegionSvgWriter.hpp"
 #include "ThreeRegionInteractionForces.hpp"
@@ -69,7 +70,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
-#include <mesh/src/immersed_boundary/ImmersedBoundaryPalisadeMeshGenerator.hpp>
 
 // Make the variables map global for simplicity
 namespace bpo = boost::program_options;
@@ -219,6 +219,11 @@ void SetupAndRunSimulation()
     p_svg_writer->SetRegionSizes(region_sizes);
     simulator.AddSimulationModifier(p_svg_writer);
 
+    auto p_stopping_modifier = boost::make_shared<SimulationStoppingModifier<2>>();
+    p_stopping_modifier->SetThreshold(10.0 * (2.0 * M_PI / 360.0));
+    simulator.AddSimulationModifier(p_stopping_modifier);
+
+
     if (apical_lamina)
     {
         simulator.AddSimulationModifier(boost::make_shared<ApicalAndBasalTaggingModifier<2>>());
@@ -281,8 +286,6 @@ void SetupAndRunSimulation()
         r_progress.SetOutputToConsole(true);
     }
 
-    double vol_start = p_mesh->GetVolumeOfElement(4u);
-
     try
     {
         simulator.Solve();
@@ -300,60 +303,6 @@ void SetupAndRunSimulation()
     }
     auto minmax_y_vals = std::minmax_element(lamina_y_vals.begin(), lamina_y_vals.end());
 
-    double vol_end = p_mesh->GetVolumeOfElement(4u);
-
-    // Calculate the average lean of cells
-    std::vector<double> leans;
-    for (unsigned elem_idx = 0; elem_idx < p_mesh->GetNumElements(); ++elem_idx)
-    {
-        // Pointer to element
-        auto p_elem = p_mesh->GetElement(elem_idx);
-
-        // Pointers to corner nodes
-        auto p_lt_basal = p_elem->rGetCornerNodes()[LEFT_BASAL_CORNER];
-        auto p_lt_apical = p_elem->rGetCornerNodes()[LEFT_APICAL_CORNER];
-        auto p_rt_basal = p_elem->rGetCornerNodes()[RIGHT_BASAL_CORNER];
-        auto p_rt_apical = p_elem->rGetCornerNodes()[RIGHT_APICAL_CORNER];
-
-        if (p_lt_basal == nullptr || p_lt_apical == nullptr || p_rt_basal == nullptr || p_rt_apical == nullptr)
-        {
-            continue;
-        }
-
-        unsigned lb_idx = p_elem->GetNodeLocalIndex(p_lt_basal->GetIndex());
-        unsigned la_idx = p_elem->GetNodeLocalIndex(p_lt_apical->GetIndex());
-        unsigned rb_idx = p_elem->GetNodeLocalIndex(p_rt_basal->GetIndex());
-        unsigned ra_idx = p_elem->GetNodeLocalIndex(p_rt_apical->GetIndex());
-
-        unsigned lt_third = SmallDifferenceMod(lb_idx, la_idx, p_elem->GetNumNodes()) / 3;
-        unsigned rt_third = SmallDifferenceMod(rb_idx, ra_idx, p_elem->GetNumNodes()) / 3;
-
-        // Middle third, anticlockwise from left apical corner
-        auto lt_vec = p_mesh->GetVectorFromAtoB(
-                p_elem->GetNode(AdvanceMod(la_idx, lt_third + lt_third, p_elem->GetNumNodes()))->rGetLocation(),
-                p_elem->GetNode(AdvanceMod(la_idx, lt_third, p_elem->GetNumNodes()))->rGetLocation()
-        );
-
-        // Middle third, clockwise from right apical corner
-        auto rt_vec = p_mesh->GetVectorFromAtoB(
-                p_elem->GetNode(AdvanceMod(ra_idx, -rt_third - rt_third, p_elem->GetNumNodes()))->rGetLocation(),
-                p_elem->GetNode(AdvanceMod(ra_idx, -rt_third, p_elem->GetNumNodes()))->rGetLocation()
-        );
-
-        if (elem_idx < region_sizes[0])
-        {
-            leans.emplace_back(std::atan(lt_vec[0] / lt_vec[1]));
-            leans.emplace_back(std::atan(rt_vec[0] / rt_vec[1]));
-        }
-        else if (elem_idx >= region_sizes[0] + region_sizes[1])
-        {
-            leans.emplace_back(std::atan(-lt_vec[0] / lt_vec[1]));
-            leans.emplace_back(std::atan(-rt_vec[0] / rt_vec[1]));
-        }
-    }
-
-    const double lean_mean = std::accumulate(leans.begin(), leans.end(), 0.0) / leans.size();
-    const double lean_var = std::inner_product(leans.begin(), leans.end(), leans.begin(), 0.0) / leans.size() - lean_mean * lean_mean;
 
     // Calculate the average (absolute) skew of non-central elements about long axis
     std::vector<double> abs_skews;
@@ -369,19 +318,9 @@ void SetupAndRunSimulation()
     }
 
     const double skew_mean = std::accumulate(abs_skews.begin(), abs_skews.end(), 0.0) / abs_skews.size();
-    const double skew_var = std::inner_product(abs_skews.begin(), abs_skews.end(), abs_skews.begin(), 0.0) / abs_skews.size() - skew_mean * skew_mean;
-
-    // Lamina angle is angle of triangle with base 0.5 and height of max y variation
-    const double lamina_angle = std::atan((*minmax_y_vals.second - *minmax_y_vals.first) / 0.5);
-    const double lean_ratio = lean_mean / lamina_angle;
-
-    PRINT_VECTOR(leans);
-    PRINT_VARIABLE(vol_end / vol_start);
 
     OutputFileHandler results_handler(output_directory.str(), false);
     out_stream results_file = results_handler.OpenOutputFile("results.csv");
-
-    const double buckling_stat = 0.5 * (p_mesh->GetElongationShapeFactorOfElement(6u) + p_mesh->GetElongationShapeFactorOfElement(8u));
 
     // Generate mp4 from svg sequence, assuming ffmpeg has been built with librsvg enabled
     {
@@ -406,24 +345,14 @@ void SetupAndRunSimulation()
     (*results_file) << "id,"
                     << "max_y_var,"
                     << "skew_mean,"
-                    << "skew_std,"
-                    << "lean_mean,"
-                    << "lean_std,"
-                    << "lean_ratio,"
-                    << "bucking_esf"
+                    << "time_to_end"
                     << std::endl;
 
 
     (*results_file) << id_string << ","
                     << std::to_string(*minmax_y_vals.second - *minmax_y_vals.first) << ","
                     << std::to_string(skew_mean) << ","
-                    << std::to_string(std::sqrt(skew_var)) << ","
-                    << std::to_string(lean_mean) << ","
-                    << std::to_string(std::sqrt(lean_var)) << ","
-                    << std::to_string(lean_ratio) << ","
-                    << std::to_string(buckling_stat);
+                    << std::to_string(SimulationTime::Instance()->GetTime());
     // Tidy up
     results_file->close();
-
-
 }
