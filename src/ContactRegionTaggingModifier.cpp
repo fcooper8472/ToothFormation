@@ -339,7 +339,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
         }
 
 
-        if (elem_it->GetIndex() < 6u) // left region
+        if (elem_it->GetIndex() < 6u && elem_it->rGetCornerNodes()[RIGHT_APICAL_CORNER] != nullptr) // left region
         {
             // Get a list of right apical nodes
             std::vector<unsigned> ra_node_ids;
@@ -369,7 +369,7 @@ void ContactRegionTaggingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopula
             unsigned adjusted_idx = idx;//(2 * idx) / 3;
             elem_it->rGetCornerNodes()[4] = elem_it->GetNode(ra_node_ids[adjusted_idx]);
         }
-        else if (elem_it->GetIndex() > 8u) // right region
+        else if (elem_it->GetIndex() > 8u && elem_it->rGetCornerNodes()[LEFT_APICAL_CORNER] != nullptr) // right region
         {
             // Get a list of right apical nodes
             std::vector<unsigned> la_node_ids;
