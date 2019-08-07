@@ -2,9 +2,17 @@ import itertools
 import os
 import re
 import subprocess
+import sys
 import time
 
 import multiprocessing as mp
+
+scripts_dir = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'scripts'))
+assert 'css' in os.listdir(scripts_dir), 'Expected to find css directory in {}'.format(scripts_dir)
+assert 'js' in os.listdir(scripts_dir), 'Expected to find js directory in {}'.format(scripts_dir)
+
+# Ensure png_to_mp4 etc can be imported
+sys.path.append(scripts_dir)
 
 try:
     import png_to_mp4
@@ -296,40 +304,41 @@ def generate_html():
 
 def copy_assets():
 
-    scripts_dir = os.environ.get('SCRIPTS_DIR')
-    if not scripts_dir:
-        print("Py: Warning: Could not find scripts directory: css and js elements may not work")
-    else:
-        # create directories to copy in to
-        if not os.path.isdir(os.path.join(path_to_output, 'css')):
-            os.mkdir(os.path.join(path_to_output, 'css'))
-        if not os.path.isdir(os.path.join(path_to_output, 'js')):
-            os.mkdir(os.path.join(path_to_output, 'js'))
+    # create directories to copy in to
+    if not os.path.isdir(os.path.join(path_to_output, 'css')):
+        os.mkdir(os.path.join(path_to_output, 'css'))
+    if not os.path.isdir(os.path.join(path_to_output, 'js')):
+        os.mkdir(os.path.join(path_to_output, 'js'))
 
-        # default css
-        default_css_src = os.path.join(scripts_dir, 'css', 'default.css')
-        default_css_dst = os.path.join(path_to_output, 'css', 'default.css')
-        subprocess.call(['cp', default_css_src, default_css_dst, '-u'])
+    # default css
+    default_css_src = os.path.join(scripts_dir, 'css', 'default.css')
+    assert os.path.isfile(default_css_src)
+    default_css_dst = os.path.join(path_to_output, 'css', 'default.css')
+    subprocess.call(['cp', default_css_src, default_css_dst, '-u'])
 
-        # tablesorter theme css
-        green_css_src = os.path.join(scripts_dir, 'css', 'theme.green.min.css')
-        green_css_dst = os.path.join(path_to_output, 'css', 'theme.green.min.css')
-        subprocess.call(['cp', green_css_src, green_css_dst, '-u'])
+    # tablesorter theme css
+    green_css_src = os.path.join(scripts_dir, 'css', 'theme.green.min.css')
+    assert os.path.isfile(green_css_src)
+    green_css_dst = os.path.join(path_to_output, 'css', 'theme.green.min.css')
+    subprocess.call(['cp', green_css_src, green_css_dst, '-u'])
 
-        # jQuery js
-        jquery_js_src = os.path.join(scripts_dir, 'js', 'jquery.min.js')
-        jquery_js_dst = os.path.join(path_to_output, 'js', 'jquery.min.js')
-        subprocess.call(['cp', jquery_js_src, jquery_js_dst, '-u'])
+    # jQuery js
+    jquery_js_src = os.path.join(scripts_dir, 'js', 'jquery.min.js')
+    assert os.path.isfile(jquery_js_src)
+    jquery_js_dst = os.path.join(path_to_output, 'js', 'jquery.min.js')
+    subprocess.call(['cp', jquery_js_src, jquery_js_dst, '-u'])
 
-        # tablesorter js
-        tablesorter_js_src = os.path.join(scripts_dir, 'js', 'jquery.tablesorter.min.js')
-        tablesorter_js_dst = os.path.join(path_to_output, 'js', 'jquery.tablesorter.min.js')
-        subprocess.call(['cp', tablesorter_js_src, tablesorter_js_dst, '-u'])
+    # tablesorter js
+    tablesorter_js_src = os.path.join(scripts_dir, 'js', 'jquery.tablesorter.min.js')
+    assert os.path.isfile(tablesorter_js_src)
+    tablesorter_js_dst = os.path.join(path_to_output, 'js', 'jquery.tablesorter.min.js')
+    subprocess.call(['cp', tablesorter_js_src, tablesorter_js_dst, '-u'])
 
-        # sort_table js
-        sort_table_js_src = os.path.join(scripts_dir, 'js', 'sort_table.js')
-        sort_table_js_dst = os.path.join(path_to_output, 'js', 'sort_table.js')
-        subprocess.call(['cp', sort_table_js_src, sort_table_js_dst, '-u'])
+    # sort_table js
+    sort_table_js_src = os.path.join(scripts_dir, 'js', 'sort_table.js')
+    assert os.path.isfile(sort_table_js_src)
+    sort_table_js_dst = os.path.join(path_to_output, 'js', 'sort_table.js')
+    subprocess.call(['cp', sort_table_js_src, sort_table_js_dst, '-u'])
 
 
 def generate_movies_html(list_of_movie_names):
