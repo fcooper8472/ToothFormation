@@ -2,10 +2,13 @@ import itertools
 import os
 import re
 import subprocess
+import sys
 import time
 
 import multiprocessing as mp
 import numpy as np
+
+sys.path.append(os.environ.get('SCRIPTS_DIR'))
 
 try:
     import png_to_mp4
