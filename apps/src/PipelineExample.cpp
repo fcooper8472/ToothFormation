@@ -39,7 +39,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "CellId.hpp"
 #include "CellsGenerator.hpp"
-#include "ChasteMakeUnique.hpp"
 #include "ExecutableSupport.hpp"
 #include "ForwardEulerNumericalMethod.hpp"
 #include "ImmersedBoundaryLinearMembraneForce.hpp"
@@ -153,7 +152,7 @@ void SetupAndRunSimulation()
 
     elements.push_back(new ImmersedBoundaryElement<2,2>(0, nodes));
 
-    auto p_mesh = our::make_unique<ImmersedBoundaryMesh<2,2>>(nodes, elements);
+    auto p_mesh = std::make_unique<ImmersedBoundaryMesh<2,2>>(nodes, elements);
     p_mesh->SetNumGridPtsXAndY(64u);
 
     std::vector<CellPtr> cells;
